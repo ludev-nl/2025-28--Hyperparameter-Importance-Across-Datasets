@@ -1,0 +1,27 @@
+Steps to setup FANOVA
+
+1. git clone https://github.com/automl/fanova.git
+
+2. make a virtual enivornment by running command:
+python3 -m venv "name of your virtual environment" 
+For instance the name of the virtual environment is fanovavenv
+python3 -m venv fanovavenv 
+
+3. activate virtual environment by running command: 
+source fanovavenv/bin/activate
+
+4. cd fanova/
+
+5. pip install -r requirements.txt
+
+6. python setup.py install
+
+Inside the fanova folder in fanova.py change line 286 into:
+sample = np.full(self.n_dims, np.nan, dtype=np.float64)
+
+now you can run fanova_test.py or create your own .py file which uses fanova 
+
+
+
+
+
