@@ -33,15 +33,20 @@ def get_data(task):
     return data
 
 def process_params(params):
+    # Extract the relevant information
+    params = params.map((lambda p_list: {p['parameter_name']: p['value'] for p in p_list.values()}))
+    params = pd.json_normalize(params)
+
     # Remove constant columns
     params = params[params.columns[params.nunique() > 1]]
 
     # Split params into numerical and categorical for preprocessing
-    p_num = params.apply(pd.to_numeric, errors="coerce", downcast="float")
+    p_num = params.map(pd.to_numeric, errors="coerce", downcast="float")
     p_num = p_num[p_num.columns[p_num.nunique() > 1]]
     p_cat = params.drop(p_num.columns, axis=1)
 
-    # Fill in missing features (as in the paper)
+    # Fill in missing features
+    # TODO: this should not be necessary. Maybe issue warning / discard entry instead?
     # Categorical features: most common category
     p_cat = p_cat.fillna(p_cat.mode(axis=0).iloc[0])
     # Numerical features: median
@@ -57,12 +62,13 @@ def process_params(params):
     # If we do not give fANOVA an explicit ConfigSpace, we need to
     # round the data, as it will otherwise infer bounds, round those,
     # and complain that the unrounded data is out of bounds.
+    # TODO: possibly not necessary if we use config_spaces
     params = params.apply(np.round, decimals=ROUND_PLACES, axis=1)
 
     return params
 
 # Example settings
-flow_id = 5527
+flow_id = 6969
 openml100 = 99
 min_runs = 500
 
@@ -82,9 +88,7 @@ for task in tasks:
         continue
 
     # Extract the relevant data
-    params = pd.json_normalize(data.parameters)
-    print(params.iloc[0])
-    X = process_params(params)
+    X = process_params(data.parameters)
     Y = data.value.to_numpy()
 
     # Fit the fanova model
@@ -103,4 +107,4 @@ for task in tasks:
     results[task] = result
 
 df = pd.DataFrame.from_dict(results, orient='index')
-df.to_csv('results.csv', index=False)
+df.to_csv(f'results-f{flow_id}-s{openml100}.csv', index=False)
