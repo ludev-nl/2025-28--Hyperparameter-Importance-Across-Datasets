@@ -6,6 +6,7 @@ import pandas as pd
 
 from openml import study, evaluations, setups, exceptions
 
+
 class OpenMLFetcher:
     flow_id: int = None
     suite_id: int = None
@@ -51,8 +52,8 @@ class OpenMLFetcher:
 
         # Split the parameters into separate columns
         params = pd.concat(batches)
-        params = params.map((lambda p_list:{p['parameter_name']: p['value']
-                                            for p in p_list.values()}))
+        params = params.map((lambda p_list: {p['parameter_name']: p['value']
+                                             for p in p_list.values()}))
         params = pd.json_normalize(params).set_index(params.index)
 
         # Cast the columns to appropriate types
@@ -81,4 +82,3 @@ class OpenMLFetcher:
 
         for (task, data) in self.results.items():
             data.to_csv(folder_name + f't{task}.csv')
-

@@ -21,4 +21,4 @@ fnvs.run_fanova(min_runs)
 fnvs.export_csv(flow_id, suite_id)
 
 vis = Visualiser(fnvs.results)
-plot = vis.violinplot(show=True)
+vis.violinplot(show=True)

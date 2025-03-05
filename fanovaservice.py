@@ -6,6 +6,7 @@ from ConfigSpace import ConfigurationSpace
 # TODO: might be unnecessary if we implement configspace
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
+
 class FanovaService:
     raw_data: dict[int, pd.DataFrame] = {}
     auto_cfg_space: ConfigurationSpace = None
@@ -80,4 +81,3 @@ class FanovaService:
         # will be sent to Dash components without creating a file.
         # The first column is index, so dont plot that!
         self.results.to_csv(f'fanova_f{flow_id}_s{suite_id}.csv')
-

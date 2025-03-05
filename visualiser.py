@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.collections import Collection
 
+
 class Visualiser:
     fanova_results: pd.DataFrame = None
 
