@@ -1,0 +1,83 @@
+import numpy as np
+import pandas as pd
+
+from fanova import fANOVA
+from ConfigSpace import ConfigurationSpace
+# TODO: might be unnecessary if we implement configspace
+from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
+
+class FanovaService:
+    raw_data: dict[int, pd.DataFrame] = {}
+    auto_cfg_space: ConfigurationSpace = None
+    user_cfg_space: ConfigurationSpace = None
+    results: pd.DataFrame = None
+
+    def __init__(self, raw_data: dict[int, pd.DataFrame]) -> None:
+        self.raw_data = raw_data
+        self.auto_configspace()
+        self.impute_data()
+
+    def auto_configspace(self) -> ConfigurationSpace:
+        # TODO: create one configspace for all tasks
+        # Use select_dtypes to split num (float, int) and cat (str)
+
+        self.auto_cfg_space = None
+
+        return self.auto_cfg_space
+
+    def impute_data(self):
+        # TODO: impute using fillna with some value out of range
+        # (see configspace for range)
+
+        imputed_data = {}
+        for (task, data) in self.raw_data.items():
+            imputed_data[task] = data.fillna(0)
+
+        self.raw_data = imputed_data
+
+        pass
+
+    def filter_data(self, task_id: int) -> tuple[pd.DataFrame, np.ndarray]:
+        # Extract the relevant data
+        data = self.raw_data[task_id]
+        X = data.drop(labels="value", axis=1)
+        Y = data.value.to_numpy()
+
+        # TODO: filter X (and Y) using user configspace if applicable
+
+        return X, Y
+
+    def run_fanova(self, min_runs: int) -> pd.DataFrame:
+        results = {}
+        for task in self.raw_data.keys():
+            X, Y = self.filter_data(task)
+
+            if len(X) < min_runs:
+                continue
+
+            # TODO: use correct configspace
+            X = X.apply(np.round, decimals=ROUND_PLACES, axis=1)
+            X = X[X.columns[X.nunique() > 1]]
+            fnv = fANOVA(X, Y)
+
+            result = {}
+            index = 0
+            for param in X.columns.values:
+                score = fnv.quantify_importance((index,))[(index,)]
+                result[param] = score['individual importance']
+                index += 1
+
+            # TODO: most important pairwise marginals
+
+            results[task] = result
+
+        self.results = pd.DataFrame.from_dict(results, orient='index')
+
+        return self.results
+
+    def export_csv(self, flow_id, suite_id):
+        # TODO: this is just for current testing. Eventually this
+        # will be sent to Dash components without creating a file.
+        # The first column is index, so dont plot that!
+        self.results.to_csv(f'fanova_f{flow_id}_s{suite_id}.csv')
+
