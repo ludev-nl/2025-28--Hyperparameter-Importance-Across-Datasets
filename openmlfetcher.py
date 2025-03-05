@@ -22,7 +22,8 @@ class OpenMLFetcher:
             self.tasks = study.get_suite(suite_id=self.suite_id).tasks
         except exceptions.OpenMLServerException:
             # TODO: we might want to tell the user in some way
-            print(f"Error: suite {self.suite_id} does not exist!")
+            # that this suite does not exist
+            return None
 
         return self.tasks
 
@@ -60,10 +61,6 @@ class OpenMLFetcher:
         p_num = params.map(pd.to_numeric, errors="coerce")
         p_num = p_num.dropna(axis=1, how='all')
         p_cat = params.drop(p_num.columns, axis=1).astype('string')
-
-        # TODO: no more one hot encoding once configspace is implemented
-        p_cat = pd.get_dummies(p_cat, dtype=float)
-
         params = p_num.join(p_cat)
 
         # Finally we match the evaluations with the normalised setups

@@ -22,7 +22,14 @@ class FanovaService:
         # TODO: create one configspace for all tasks
         # Use select_dtypes to split num (float, int) and cat (str)
 
-        self.auto_cfg_space = None
+        # TODO: no more one hot encoding once configspace is implemented
+        one_hot_data = {}
+        for (task, data) in self.raw_data.items():
+            one_hot_data[task] = pd.get_dummies(data,
+                                     columns=data.select_dtypes(
+                                         exclude='number').columns,
+                                     dtype=float)
+        self.raw_data = one_hot_data
 
         return self.auto_cfg_space
 
