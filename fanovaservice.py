@@ -25,17 +25,16 @@ class FanovaService:
         # TODO: no more one hot encoding once configspace is implemented
         one_hot_data = {}
         for (task, data) in self.raw_data.items():
-            one_hot_data[task] = pd.get_dummies(data,
-                                     columns=data.select_dtypes(
-                                         exclude='number').columns,
-                                     dtype=float)
+            cat = data.select_dtypes(exclude='number').columns
+            one_hot_data[task] = pd.get_dummies(data, columns=cat, dtype=float)
         self.raw_data = one_hot_data
 
         return self.auto_cfg_space
 
     def impute_data(self):
         # TODO: impute using fillna with some value out of range
-        # (see configspace for range)
+        # (see configspace for range). Also think about how this
+        # should affect the configspace given to fanova.
 
         imputed_data = {}
         for (task, data) in self.raw_data.items():

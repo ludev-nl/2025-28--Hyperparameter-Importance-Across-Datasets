@@ -1,8 +1,6 @@
 import unittest
 import pandas as pd
 
-from openml.exceptions import OpenMLServerException
-
 from openmlfetcher import OpenMLFetcher
 
 
@@ -21,7 +19,7 @@ class OpenMLTests(unittest.TestCase):
                      146819, 146820, 146821, 146822, 146824, 146825, 167119,
                      167120, 167121, 167124, 167125, 167140, 167141]
         tasks = self.omlf.fetch_tasks()
-        self.assertEqual(tasks, openml100)
+        self.assertListEqual(tasks, openml100)
 
     def test_tasks_neg(self):
         self.omlf.suite_id = 1000000
@@ -32,12 +30,13 @@ class OpenMLTests(unittest.TestCase):
         data = self.omlf.fetch_runs(3, max_runs)
         self.assertIsInstance(data, pd.DataFrame)
         self.assertEqual(len(data), max_runs)
-        self.assertEqual(len(data.columns), 29) # TODO
-        self.assertNotIn(object, set(data.dtypes)) # TODO
+        self.assertEqual(len(data.columns), 29)
+        self.assertNotIn(object, set(data.dtypes))
 
     def test_runs_neg(self):
         data = self.omlf.fetch_runs(1000000)
         self.assertIsNone(data)
+
 
 if __name__ == '__main__':
     unittest.main()
