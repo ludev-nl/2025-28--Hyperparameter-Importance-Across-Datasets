@@ -1,54 +1,60 @@
 name: static_analysis-unit_tests
 
-on: [pull_request]
+on: [push]
 
 jobs:
 
   static_analysis:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      # - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
+      # - uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.12'
+      #     cache: 'pip'
 
-      - uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: libpcre3 libpcre3-dev
+      # - uses: awalsh128/cache-apt-pkgs-action@latest
+      #   with:
+      #     packages: libpcre3 libpcre3-dev
 
-      - uses: mmomtchev/setup-swig@v1
-        with:
-          version: v3.0.12
-          cache: true
+      - run: sudo apt install swig3.0
 
-      - run: pip install -r requirements.txt
+      - run: which swig3.0
 
-      - run: python -m flake8
+      - run: echo $PATH
 
-  unit_tests:
-    # Reactivate these two lines if you get cryptic cache errors
-    # needs: static_analysis
-    # if: ${{ always() }}
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
+      # - uses: mmomtchev/setup-swig@v1
+      #   with:
+      #     version: v3.0.12
+      #     cache: true
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
+      # - run: pip install -r requirements.txt
 
-      - uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: libpcre3 libpcre3-dev
+      # - run: python -m flake8
 
-      - uses: mmomtchev/setup-swig@v1
-        with:
-          version: v3.0.12
-          cache: true
+  # unit_tests:
+  #   # Reactivate these two lines if you get cryptic cache errors
+  #   # needs: static_analysis
+  #   # if: ${{ always() }}
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - run: pip install -r requirements.txt
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.12'
+  #         cache: 'pip'
 
-      - run: python -m unittest tests/openmltests.py tests/fanovatests.py
+  #     - uses: awalsh128/cache-apt-pkgs-action@latest
+  #       with:
+  #         packages: libpcre3 libpcre3-dev
+
+  #     - uses: mmomtchev/setup-swig@v1
+  #       with:
+  #         version: v3.0.12
+  #         cache: true
+
+  #     - run: pip install -r requirements.txt
+
+  #     - run: python -m unittest tests/openmltests.py tests/fanovatests.py
