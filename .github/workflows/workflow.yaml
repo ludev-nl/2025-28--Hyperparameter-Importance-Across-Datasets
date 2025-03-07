@@ -1,6 +1,6 @@
 name: static_analysis-unit_tests
 
-on: [pull_request]
+on: [push]
 
 jobs:
 
