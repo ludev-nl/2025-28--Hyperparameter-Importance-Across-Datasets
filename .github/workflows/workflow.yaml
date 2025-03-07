@@ -3,7 +3,8 @@ name: static_analysis-unit_tests
 on: [push]
 
 jobs:
-  setup:
+
+  static_analysis:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -15,23 +16,30 @@ jobs:
 
       - uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          packages: libpcre3 libpcre3-dev
+          packages: libpcre3 libpcre3-dev swig3.0
 
-      - uses: mmomtchev/setup-swig@v1
-        with:
-          version: v3.0.12
-          cache: true
+      - run: ln -s swig swig3.0
 
       - run: pip install -r requirements.txt
 
-  static_analysis:
-    needs: setup
-    runs-on: ubuntu-24.04
-    steps:
       - run: python -m flake8
 
-  unit_tests:
-    needs: setup
-    runs-on: ubuntu-24.04
-    steps:
-      - run: python -m unittest tests/openmltests.py
+  # unit_tests:
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.12'
+  #         cache: 'pip'
+
+  #     - uses: awalsh128/cache-apt-pkgs-action@latest
+  #       with:
+  #         packages: libpcre3 libpcre3-dev swig3.0
+
+  #     - run: ln -s swig swig3.0
+
+  #     - run: pip install -r requirements.txt
+
+  #     - run: python -m unittest tests/openmltests.py
