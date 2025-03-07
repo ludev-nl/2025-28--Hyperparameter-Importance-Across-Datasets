@@ -20,7 +20,7 @@ jobs:
         with:
           packages: libpcre3 libpcre3-dev swig3.0
 
-      - run: ln -fs /usr/bin/swig /usr/bin/swig3.0
+      - run: sudo ln -fs /usr/bin/swig /usr/bin/swig3.0
 
       - run: which swig
 
