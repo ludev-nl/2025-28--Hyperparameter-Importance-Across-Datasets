@@ -18,7 +18,7 @@ jobs:
         with:
           packages: libpcre3 libpcre3-dev swig3.0
 
-      - run: usr/bin/ln -s swig swig3.0
+      - run: /usr/bin/ln -s swig swig3.0
 
       - run: which swig
 
