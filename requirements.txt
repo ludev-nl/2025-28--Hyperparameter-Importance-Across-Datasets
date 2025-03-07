@@ -1,3 +1,4 @@
+git+https://github.com/automl/fanova@master
 anyio==4.8.0
 argon2-cffi==23.1.0
 argon2-cffi-bindings==21.2.0
@@ -20,7 +21,6 @@ decorator==5.2.1
 defusedxml==0.7.1
 docutils==0.21.2
 executing==2.2.0
-fanova==2.0.19
 fastjsonschema==2.21.1
 flake8==7.1.2
 fonttools==4.56.0
