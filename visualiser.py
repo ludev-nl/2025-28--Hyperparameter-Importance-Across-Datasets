@@ -1,5 +1,6 @@
 import pandas as pd
-# TODO: matplotlib should be replaced by plotly
+import plotly.express as px
+import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from matplotlib.collections import Collection
 
@@ -10,13 +11,35 @@ class Visualiser:
     def __init__(self, fanova_results: pd.DataFrame) -> None:
         self.fanova_results = fanova_results
 
-    def violinplot(self, show: bool) -> dict[str, Collection]:
+    def violinplot(self, show: bool) -> go.Figure():
         # TODO: plotly
-        plot = plt.violinplot(self.fanova_results, showmedians=True)
-        if show:
-            plt.show()
+        fig = go.Figure()
 
-        return plot
+        # drop columns containing null values
+        plot_data = self.fanova_results.dropna(axis=1)
+        
+        if plot_data.shape[1] == 0:
+            print("no columns left after dropping NaN columns")
+            return fig  
+
+        hyperparameters = list(plot_data.columns)
+
+        for hp in hyperparameters:
+            fig.add_trace(go.Violin(x=[hp]*(plot_data.shape[0]), 
+                                    y=plot_data[hp].tolist(), 
+                                    name=hp,
+                                    box_visible=True, 
+                                    meanline_visible=True))
+
+        fig.update_layout(title="Variance Contribution of Hyperparameters",
+        yaxis_title="Variance Contribution",
+        xaxis_tickangle=-45)
+
+        if show:
+            fig.show()
+
+        return fig
+
 
     def crit_diff_diagram(self, show: bool) -> dict[str, Collection]:
         # TODO: implement
