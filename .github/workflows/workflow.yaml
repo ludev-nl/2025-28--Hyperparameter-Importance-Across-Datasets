@@ -14,11 +14,13 @@ jobs:
       #     python-version: '3.12'
       #     cache: 'pip'
 
+      - run: swig -version
+
       - uses: awalsh128/cache-apt-pkgs-action@latest
         with:
           packages: libpcre3 libpcre3-dev swig3.0
 
-      - run: /usr/bin/ln -fs swig swig3.0
+      - run: ln -fs /usr/bin/swig /usr/bin/swig3.0
 
       - run: which swig
 
