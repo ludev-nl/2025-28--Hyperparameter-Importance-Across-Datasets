@@ -9,7 +9,9 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-      - run: sudo apt-get install libpcre3 libpcre3-dev
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libpcre3 libpcre3-dev
       - uses: mmomtchev/setup-swig@v1
         with:
           version: v3.0.12
@@ -26,7 +28,9 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-      - run: sudo apt-get install libpcre3 libpcre3-dev
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libpcre3 libpcre3-dev
       - uses: mmomtchev/setup-swig@v1
         with:
           version: v3.0.12
