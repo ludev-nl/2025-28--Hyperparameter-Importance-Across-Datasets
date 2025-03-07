@@ -20,7 +20,7 @@ jobs:
 
       - run: sudo apt install swig3.0
 
-      - run: alias swig=swig3.0 && which swig
+      - run: alias swig=swig3.0 && swig -version
 
       # - uses: mmomtchev/setup-swig@v1
       #   with:
