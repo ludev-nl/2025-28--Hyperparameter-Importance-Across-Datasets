@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 
 from fanova import fANOVA
-from ConfigSpace import ConfigurationSpace
+from ConfigSpace import ConfigurationSpace 
+from  ConfigSpace import UniformFloatHyperparameter
+from ConfigSpace import CategoricalHyperparameter
 # TODO: might be unnecessary if we implement configspace
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
@@ -23,13 +25,34 @@ class FanovaService:
         # Use select_dtypes to split num (float, int) and cat (str)
 
         # TODO: no more one hot encoding once configspace is implemented
-        one_hot_data = {}
-        for (task, data) in self.raw_data.items():
-            cat = data.select_dtypes(exclude='number').columns
-            one_hot_data[task] = pd.get_dummies(data, columns=cat, dtype=float)
-        self.raw_data = one_hot_data
 
-        return self.auto_cfg_space
+        cs = ConfigurationSpace()
+
+        for task, data in self.raw_data.items():
+            num_cols = data.select_dtypes(include=['number']).columns
+            cat_cols = data.select_dtypes(exclude=['number']).columns
+
+            #ad numerical hyperparameters
+            for col in num_cols:
+                min_val = data[col].min()
+                max_val = data[col].max()
+                if min_val != max_val:  
+                    cs.add_hyperparameter(UniformFloatHyperparameter(col, lower=min_val, upper=max_val))
+
+            #add categorical hyperparameters
+            for col in cat_cols:
+                unique_values = list(data[col].dropna().unique())  #drop NaN values
+                if unique_values:
+                    cs.add_hyperparameter(CategoricalHyperparameter(col, choices=unique_values))
+        self.auto_cfg_space = cs 
+        return cs
+        # one_hot_data = {}
+        # for (task, data) in self.raw_data.items():
+        #     cat = data.select_dtypes(exclude='number').columns
+        #     one_hot_data[task] = pd.get_dummies(data, columns=cat, dtype=float)
+        # self.raw_data = one_hot_data
+
+        # return self.auto_cfg_space
 
     def impute_data(self):
         # TODO: impute using fillna with some value out of range
