@@ -1,5 +1,7 @@
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
+import Orange
 
 
 class Visualiser:
@@ -40,5 +42,53 @@ class Visualiser:
         return fig
 
     def crit_diff_diagram(self, show: bool) -> go.Figure:
-        # TODO: implement
-        return None
+        fig = go.Figure()
+
+        plot_data = self.fanova_results.dropna(axis=1)
+        if plot_data.shape[1] == 0:
+            print("No columns left after dropping NaN columns")
+            return None
+        
+        hyperparameters = list(plot_data.columns)
+        ranks = np.argsort(np.argsort(-plot_data.to_numpy(), axis=1), axis=1) + 1
+        mean_ranks = np.mean(ranks, axis=0)
+
+        # Caluclate critical distance
+        from scipy.stats import friedmanchisquare
+        from Orange.evaluation.scoring import compute_CD
+        _, p_value = friedmanchisquare(*plot_data.to_numpy().T)
+        cd = compute_CD(mean_ranks, plot_data.shape[0]) if p_value < 0.05 else 0
+
+        # Plot average ranks for every hyperparameter
+        for i, (hp, rank) in enumerate(zip(hyperparameters, mean_ranks)):
+            fig.add_trace(go.Scatter(
+                x=[rank],
+                y=[hp],
+                mode='markers',
+                name=hp,
+                marker=dict(size=10)
+            ))
+
+        # Add critical distance line
+        fig.add_shape(
+            type="line",
+            x0=min(mean_ranks) - cd,
+            y0=0,
+            x1=max(mean_ranks) + cd,
+            y1=0,
+            line=dict(color="red", width=2, dash="dash"),
+        )
+
+        # Update layout
+        fig.update_layout(
+            title="Critical Distance Diagram",
+            xaxis_title="Average Rank",
+            yaxis_title="Hyperparameters",
+            showlegend=False,
+            yaxis=dict(autorange="reversed")
+        )
+
+        if show:
+            fig.show()
+
+        return fig

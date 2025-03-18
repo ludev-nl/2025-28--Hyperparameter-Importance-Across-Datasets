@@ -22,3 +22,4 @@ fnvs.export_csv(flow_id, suite_id)
 
 vis = Visualiser(fnvs.results)
 vis.violinplot(show=True)
+vis.crit_diff_diagram(show=True)
