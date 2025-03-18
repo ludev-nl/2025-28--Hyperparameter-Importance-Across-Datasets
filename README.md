@@ -1,18 +1,22 @@
-# This is your team's git repository ✨
+# Hyperparameter Importance Across Datasets
+This project aims to create a [Dash][dash]-based web-service through which users can
+apply [functional analysis of variance][fanova] on algorithm hyperparameter
+settings and performance data from [OpenML][openml]. In this way, they can make
+observations on the relative impact of tuning specific hyperparameters on the
+performance of a machine learning algorithm, as outlined in this [paper][hyperparam].
 
-Use this repository to develop the code of your project.
+# Requirements
+In order to run the code, you need [SWIG 3.0][swig], [PCRE 3][pcre] (including the dev
+package), Python 3 and the Python packages specified with version in requirements.txt.
+For website deployment, the free version of [Dash][dash] is also needed.
 
-On GitHub, a Project has been prepared for you to organize your sprints.
-Use [Milestones][milestones] to associate issues to sprints, and then use the SCRUM board to keep track of their status.
+# Testing
+In order to test the code, you can run the test.sh file in the repository. This will run
+both a static analysis tool for PEP 8 style checking, and repository specific unit tests.
 
-We have added the MIT license, but you are free to license your code differently, if you prefer.
-
-> [!WARNING]
-> Do not commit binaries, documents, or other course material to this repository.
-> Code committed should be your own: do not copy code of external dependencies into the repository.
-> (Consider using [git submodules][submodules] to track external dependencies.)
-
-Refer to the manuals in the course material to get started. Good luck!
-
-[milestones]: https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/about-milestones
-[submodules]: https://git-scm.com/book/en/v2/Git-Tools-Submodules
+[dash]: https://plotly.com/dash/
+[fanova]: https://github.com/automl/fanova
+[openml]: https://openml.org
+[hyperparam]: https://arxiv.org/abs/1710.04725
+[swig]: https://www.swig.org
+[pcre]: https://www.pcre.org
