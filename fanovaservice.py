@@ -28,22 +28,71 @@ class FanovaService:
 
         cs = ConfigurationSpace()
 
-        for task, data in self.raw_data.items():
+        col_temp = {}
+        task_temp = {}
+        unique_temp = []
+        first = 1
+        for task, unfilered_data in self.raw_data.items():
+            data = unfilered_data.drop(columns=['value'], errors='ignore') 
             num_cols = data.select_dtypes(include=['number']).columns
             cat_cols = data.select_dtypes(exclude=['number']).columns
 
             #ad numerical hyperparameters
+            print(col_temp)
             for col in num_cols:
                 min_val = data[col].min()
                 max_val = data[col].max()
-                if min_val != max_val:  
-                    cs.add_hyperparameter(UniformFloatHyperparameter(col, lower=min_val, upper=max_val))
 
+                if (first == 1):
+                    col_temp[col] = (min_val, max_val)
+                else: 
+                    prev_min, prev_max = col_temp[col]
+                    col_temp[col] = (min(prev_min, min_val), max(prev_max, max_val))
+                # if (first == 1):
+                #     col_temp[col] = (min_val, max_val)
+                #     print(col_temp[col][0])
+                # elif (min_val < col_temp[col][0] and max_val > col_temp[col][1]): 
+                #     col_temp[col] = (min_val, max_val)
+                # elif (min_val < col_temp[col][0] and max_val < col_temp[col][1]):
+                #     col_temp[col] = (min_val, col_temp[col][1])
+                # elif (min_val > col_temp[col][0] and max_val > col_temp[col][1]):
+                #     col_temp[col] = (col_temp[col][0], max_val)
+                # elif (min_val > col_temp[col][0] and max_val < col_temp[col][1]):
+                #     col_temp[col] = (col_temp[col][0], col_temp[col][1])
+            first = 0 
+               
+            
+                # if min_val != max_val:  
+                #     cs.add(UniformFloatHyperparameter(col, lower=min_val, upper=max_val))
+
+            # min_val = (min(x[0] for x in col_temp.values()))
+            # max_val = (max(x[1] for x in col_temp.values()))
+            # task_temp[task] = (min_val, max_val) #neem de min en de max van de vorige en de huidige 
+            
             #add categorical hyperparameters
             for col in cat_cols:
                 unique_values = list(data[col].dropna().unique())  #drop NaN values
-                if unique_values:
-                    cs.add_hyperparameter(CategoricalHyperparameter(col, choices=unique_values))
+                unique_temp = unique_temp + unique_values
+                # if unique_values:
+                #     cs.add(CategoricalHyperparameter(col, choices=unique_values))
+        
+        for col, (min_val, max_val) in col_temp.items():
+            # if min_val == max_val:
+            #     cs.add_hyperparameter(Constant(col, value=min_val))  # Fix for identical min/max
+            # else:
+            if (min_val != max_val):
+                cs.add_hyperparameter(UniformFloatHyperparameter(col, lower=min_val, upper=max_val))
+                # cs.add_hyperparameter(UniformFloatHyperparameter(col, lower=min_val, upper=max_val))
+        # for col in num_cols: 
+        #     cs.add(UniformFloatHyperparameter(col, lower=col_temp[col][0], upper=col_temp[col][1]))
+
+        # global_min_val = (min(x[0] for x in task_temp.values()))
+        # global_max_val = (max(x[1] for x in task_temp.values()))
+        # cs.add(UniformFloatHyperparameter(col, lower=global_min_val, upper=global_max_val))
+
+        unique_values = list(set(unique_temp))  #drop NaN values
+        cs.add(CategoricalHyperparameter(col, choices=unique_values))
+
         self.auto_cfg_space = cs 
         return cs
         # one_hot_data = {}
