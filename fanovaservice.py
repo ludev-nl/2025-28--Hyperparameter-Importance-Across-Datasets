@@ -38,7 +38,6 @@ class FanovaService:
             cat_cols = data.select_dtypes(exclude=['number']).columns
 
             #ad numerical hyperparameters
-            print(col_temp)
             for col in num_cols:
                 min_val = data[col].min()
                 max_val = data[col].max()
@@ -60,14 +59,6 @@ class FanovaService:
                 # elif (min_val > col_temp[col][0] and max_val < col_temp[col][1]):
                 #     col_temp[col] = (col_temp[col][0], col_temp[col][1])
             first = 0 
-               
-            
-                # if min_val != max_val:  
-                #     cs.add(UniformFloatHyperparameter(col, lower=min_val, upper=max_val))
-
-            # min_val = (min(x[0] for x in col_temp.values()))
-            # max_val = (max(x[1] for x in col_temp.values()))
-            # task_temp[task] = (min_val, max_val) #neem de min en de max van de vorige en de huidige 
             
             #add categorical hyperparameters
             for col in cat_cols:
@@ -77,18 +68,9 @@ class FanovaService:
                 #     cs.add(CategoricalHyperparameter(col, choices=unique_values))
         
         for col, (min_val, max_val) in col_temp.items():
-            # if min_val == max_val:
-            #     cs.add_hyperparameter(Constant(col, value=min_val))  # Fix for identical min/max
-            # else:
             if (min_val != max_val):
                 cs.add_hyperparameter(UniformFloatHyperparameter(col, lower=min_val, upper=max_val))
-                # cs.add_hyperparameter(UniformFloatHyperparameter(col, lower=min_val, upper=max_val))
-        # for col in num_cols: 
-        #     cs.add(UniformFloatHyperparameter(col, lower=col_temp[col][0], upper=col_temp[col][1]))
 
-        # global_min_val = (min(x[0] for x in task_temp.values()))
-        # global_max_val = (max(x[1] for x in task_temp.values()))
-        # cs.add(UniformFloatHyperparameter(col, lower=global_min_val, upper=global_max_val))
 
         unique_values = list(set(unique_temp))  #drop NaN values
         cs.add(CategoricalHyperparameter(col, choices=unique_values))
