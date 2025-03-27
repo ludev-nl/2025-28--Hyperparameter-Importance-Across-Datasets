@@ -38,6 +38,7 @@ class FanovaService:
             cat_cols = data.select_dtypes(exclude=['number']).columns
 
             #ad numerical hyperparameters
+            print(col_temp)
             for col in num_cols:
                 min_val = data[col].min()
                 max_val = data[col].max()
@@ -59,23 +60,28 @@ class FanovaService:
                 # elif (min_val > col_temp[col][0] and max_val < col_temp[col][1]):
                 #     col_temp[col] = (col_temp[col][0], col_temp[col][1])
             first = 0 
+
             
             #add categorical hyperparameters
             for col in cat_cols:
                 unique_values = list(data[col].dropna().unique())  #drop NaN values
                 unique_temp = unique_temp + unique_values
-                # if unique_values:
-                #     cs.add(CategoricalHyperparameter(col, choices=unique_values))
         
         for col, (min_val, max_val) in col_temp.items():
+            # if min_val == max_val:
+            #     cs.add_hyperparameter(Constant(col, value=min_val))  # Fix for identical min/max
+            # else:
             if (min_val != max_val):
                 cs.add_hyperparameter(UniformFloatHyperparameter(col, lower=min_val, upper=max_val))
+        # for col in num_cols: 
+        #     cs.add(UniformFloatHyperparameter(col, lower=col_temp[col][0], upper=col_temp[col][1]))
 
 
         unique_values = list(set(unique_temp))  #drop NaN values
         cs.add(CategoricalHyperparameter(col, choices=unique_values))
 
         self.auto_cfg_space = cs 
+        print(cs)
         return cs
         # one_hot_data = {}
         # for (task, data) in self.raw_data.items():
