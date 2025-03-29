@@ -1,2 +1,4 @@
 *.csv
 __pycache__/
+tests/__pycache__
+openml_f*_s*/
