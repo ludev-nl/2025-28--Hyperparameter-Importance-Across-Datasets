@@ -20,16 +20,11 @@ class FanovaService:
         self.impute_data()
 
     def auto_configspace(self) -> ConfigurationSpace:
-        # TODO: create one configspace for all tasks
-        # Use select_dtypes to split num (float, int) and cat (str)
-
-        # TODO: no more one hot encoding once configspace is implemented
-
         param_dict = {}
-        first = True
 
         for _, raw_data in self.raw_data.items():
             data = raw_data.drop(columns=['value'])
+            data = data.loc[:, data.notna().any()]
             num_cols = data.select_dtypes(include=['number']).columns
             cat_cols = data.select_dtypes(exclude=['number']).columns
 
@@ -37,7 +32,7 @@ class FanovaService:
             for col in num_cols:
                 min_val = data[col].min()
                 max_val = data[col].max()
-                if first:
+                if col not in param_dict.keys():
                     param_dict[col] = (min_val, max_val)
                 else:
                     prev_min, prev_max = param_dict[col]
@@ -47,12 +42,10 @@ class FanovaService:
             # Unique values of categorical hyperparams
             for col in cat_cols:
                 unique_values = set(data[col].dropna().unique())
-                if first:
+                if col not in param_dict.keys():
                     param_dict[col] = unique_values
                 else:
                     param_dict[col] = set.union(param_dict[col], unique_values)
-
-            first = False
 
         # Find constant parameters, and convert sets to lists
         for param, range in param_dict.items():
@@ -77,7 +70,7 @@ class FanovaService:
         imputed_data = {}
         default = dict(self.auto_cfg_space.get_default_configuration())
         for (task, data) in self.raw_data.items():
-            imputed_data[task] = data.fillna(default)
+            imputed_data[task] = data.dropna(axis=1, how='all').fillna(default)
 
         self.raw_data = imputed_data
 
@@ -86,7 +79,7 @@ class FanovaService:
     def filter_data(self, task_id: int) -> tuple[pd.DataFrame, np.ndarray]:
         # Extract the relevant data
         data = self.raw_data[task_id]
-        X = data.drop(labels="value", axis=1)
+        X = data[list(self.auto_cfg_space.keys())]
         Y = data.value.to_numpy()
 
         # TODO: filter X (and Y) using user configspace if applicable
