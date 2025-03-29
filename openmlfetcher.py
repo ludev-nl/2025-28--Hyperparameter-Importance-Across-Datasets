@@ -19,7 +19,10 @@ def fetch_tasks(suite_id: int) -> list[int]:
 
     return tasks
 
-def fetch_runs(flow_id: int, task_id: int, max_runs: int = None) -> pd.DataFrame:
+
+def fetch_runs(flow_id: int,
+               task_id: int,
+               max_runs: int = None) -> pd.DataFrame:
     # First we check if there are even enough runs with this fast
     # function. This does not throw errors for invalid ids.
     evals = evaluations.list_evaluations(function='predictive_accuracy',
@@ -46,7 +49,7 @@ def fetch_runs(flow_id: int, task_id: int, max_runs: int = None) -> pd.DataFrame
     # Split the parameters into separate columns
     params = pd.concat(batches)
     params = params.map((lambda p_list: {p['parameter_name']: p['value']
-                                            for p in p_list.values()}))
+                                         for p in p_list.values()}))
     params = pd.json_normalize(params).set_index(params.index)
 
     # Cast the columns to appropriate types
@@ -60,7 +63,10 @@ def fetch_runs(flow_id: int, task_id: int, max_runs: int = None) -> pd.DataFrame
 
     return runs
 
-def export_csv(flow_id: int, suite_id: int, data: dict[int, pd.DataFrame]) -> None:
+
+def export_csv(flow_id: int,
+               suite_id: int,
+               data: dict[int, pd.DataFrame]) -> None:
     # TODO: this is just for current testing. Eventually this
     # will be sent to Dash components without creating a file.
     folder_name = f'./openml_f{flow_id}_s{suite_id}/'

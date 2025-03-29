@@ -48,12 +48,15 @@ def auto_configspace(data: dict[int, pd.DataFrame]) -> ConfigurationSpace:
 
     return ConfigurationSpace(space=param_dict)
 
-def filter_data(data: dict[int, pd.DataFrame], cfg_space: ConfigurationSpace) \
-        -> dict[int, pd.DataFrame]:
+
+def filter_data(data: dict[int, pd.DataFrame],
+                cfg_space: ConfigurationSpace) -> dict[int, pd.DataFrame]:
     # TODO: unimplemented
     return data
 
-def impute_data(data: dict[int, pd.DataFrame], cfg_space: ConfigurationSpace) \
+
+def impute_data(data: dict[int, pd.DataFrame],
+                cfg_space: ConfigurationSpace) \
         -> tuple[dict[int, pd.DataFrame], ConfigurationSpace]:
     # TODO: impute using some value out of range, instead of default
     # This should return a new configspace, that also includes the
@@ -62,23 +65,27 @@ def impute_data(data: dict[int, pd.DataFrame], cfg_space: ConfigurationSpace) \
     default = dict(cfg_space.get_default_configuration())
 
     for task, task_data in data.items():
-        imputed_data[task] = task_data.dropna(axis=1, how='all').fillna(default)
+        imputed_data[task] = \
+            task_data.dropna(axis=1, how='all').fillna(default)
 
     return imputed_data, cfg_space
 
-def prepare_data(data: dict[int, pd.DataFrame], cfg_space: ConfigurationSpace) \
-        -> dict[int, pd.DataFrame]:
+
+def prepare_data(data: dict[int, pd.DataFrame],
+                 cfg_space: ConfigurationSpace) -> dict[int, pd.DataFrame]:
     res = data.apply(np.round, decimals=ROUND_PLACES)
 
     for param_name in cfg_space:
         param = cfg_space[param_name]
         if isinstance(param, CategoricalHyperparameter):
-            res[param_name] = res[param_name].map((lambda option:
-                                                   param.choices.index(option)))
+            res[param_name] = \
+                res[param_name].map((lambda option:
+                                     param.choices.index(option)))
         elif isinstance(param, Constant):
             res[param_name] = 0
 
     return res
+
 
 def run_fanova(data: dict[int, pd.DataFrame],
                cfg_space: ConfigurationSpace,
@@ -111,7 +118,10 @@ def run_fanova(data: dict[int, pd.DataFrame],
 
     return pd.DataFrame.from_dict(results, orient='index')
 
-def export_csv(flow_id: int, suite_id: int, results: pd.DataFrame):
+
+def export_csv(flow_id: int,
+               suite_id: int,
+               results: pd.DataFrame) -> None:
     # TODO: this is just for current testing. Eventually this
     # will be sent to Dash components without creating a file.
     # The first column is index, so dont plot that!
