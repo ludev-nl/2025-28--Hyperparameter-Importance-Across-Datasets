@@ -98,11 +98,11 @@ def run_fanova(data: dict[int, pd.DataFrame],
     results = {}
 
     for task, task_data in data.items():
+        if len(task_data) < min_runs:
+            continue
+
         X = task_data.drop(columns=['value'])
         Y = task_data.value.to_numpy()
-
-        if len(X) < min_runs:
-            continue
 
         fnv = fANOVA(X, Y, config_space=cfg_space)
 

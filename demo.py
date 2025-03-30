@@ -13,7 +13,8 @@ max_runs = 200
 tasks = omlf.fetch_tasks(suite_id)
 data = {}
 for task in tasks[:20]:
-    data[task] = omlf.fetch_runs(flow_id, task, max_runs)
+    task_data = omlf.fetch_runs(flow_id, task, max_runs)
+    data[task] = omlf.coerce_types(task_data)
 
 # All these steps have to be executed in this order, and
 # only the filtering might happen multiple times

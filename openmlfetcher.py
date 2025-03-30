@@ -52,16 +52,19 @@ def fetch_runs(flow_id: int,
                                          for p in p_list.values()}))
     params = pd.json_normalize(params).set_index(params.index)
 
-    # Cast the columns to appropriate types
-    p_num = params.map(pd.to_numeric, errors="coerce")
-    p_num = p_num.dropna(axis=1, how='all')
-    p_cat = params.drop(p_num.columns, axis=1).astype('string')
-    params = p_num.join(p_cat)
-
     # Finally we match the evaluations with the normalised setups
-    runs = evals.set_index('setup_id')[['value']].join(params)
+    evals = evals.set_index('run_id')[['setup_id', 'value']]
+    data = evals.join(params, on='setup_id').drop(columns=['setup_id'])
 
-    return runs
+    return data
+
+
+def coerce_types(data: pd.DataFrame) -> pd.DataFrame:
+    p_num = data.map(pd.to_numeric, errors="coerce")
+    p_cat = data.loc[:, p_num.isna().all()].astype('string')
+    p_num[p_cat.columns] = p_cat
+
+    return p_num
 
 
 def export_csv(flow_id: int,
