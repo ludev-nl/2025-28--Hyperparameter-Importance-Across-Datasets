@@ -4,9 +4,12 @@ import plotly.graph_objects as go
 
 def violinplot(fanova_results: pd.DataFrame,
                show: bool) -> go.Figure:
+    """Create a violin plot of the data in fanova_results, and
+    show the plot iff show == True.
+    """
     fig = go.Figure()
 
-    plot_data = fanova_results.dropna(axis=1)
+    plot_data = fanova_results.dropna(axis=1, how='all')
 
     if plot_data.shape[1] == 0:
         print("no columns left after dropping NaN columns")
@@ -34,5 +37,8 @@ def violinplot(fanova_results: pd.DataFrame,
 
 def crit_diff_diagram(fanova_results: pd.DataFrame,
                       show: bool) -> go.Figure:
+    """Create a critical difference diagram of the data in
+    fanova_results, and show the plot iff show == True.
+    """
     # TODO: implement
     return None

@@ -8,6 +8,9 @@ from openml import study, evaluations, setups, exceptions
 
 
 def fetch_tasks(suite_id: int) -> list[int]:
+    """Fetch the list of task IDs in the benchmark suite specified
+    by suite_id. Returns None if the suite does not exist.
+    """
     tasks = None
 
     try:
@@ -23,6 +26,12 @@ def fetch_tasks(suite_id: int) -> list[int]:
 def fetch_runs(flow_id: int,
                task_id: int,
                max_runs: int = None) -> pd.DataFrame:
+    """Fetch the hyperparameter setups and resulting evaluations
+    for the algorithm with flow_id in th task with task_id, in a
+    dataframe with index run_id and value and parameters in all
+    separate columns. If specified, retrieve at most max_runs
+    setup-evaluation combinations.
+    """
     # First we check if there are even enough runs with this fast
     # function. This does not throw errors for invalid ids.
     evals = evaluations.list_evaluations(function='predictive_accuracy',
@@ -60,6 +69,9 @@ def fetch_runs(flow_id: int,
 
 
 def coerce_types(data: pd.DataFrame) -> pd.DataFrame:
+    """Coerce the types in data and return the resulting dataframe.
+    All columns will be either numeric or string d_type.
+    """
     p_num = data.map(pd.to_numeric, errors="coerce")
     p_cat = data.loc[:, p_num.isna().all()].astype('string')
     p_num[p_cat.columns] = p_cat

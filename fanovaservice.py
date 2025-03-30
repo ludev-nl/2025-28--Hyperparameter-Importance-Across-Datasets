@@ -9,11 +9,17 @@ from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
 
 def auto_configspace(data: dict[int, pd.DataFrame]) -> ConfigurationSpace:
+    """Create a configuration space to fit all hyperparameter setups in
+    data, which should still contain the irrelevant 'value' column. The
+    resulting configuration space will be as small as possible, will not
+    contain NA values, and parameters that are NA in all data will not
+    appear in the configuration space at all.
+    """
     param_dict = {}
 
     for _, full_data in data.items():
         params_data = full_data.drop(columns=['value'])
-        params_data = params_data.loc[:, params_data.notna().any()]
+        params_data = params_data.dropna(axis=1, how='all')
         num_cols = params_data.select_dtypes(include=['number']).columns
         cat_cols = params_data.select_dtypes(exclude=['number']).columns
 
@@ -51,13 +57,21 @@ def auto_configspace(data: dict[int, pd.DataFrame]) -> ConfigurationSpace:
 
 def filter_data(data: dict[int, pd.DataFrame],
                 cfg_space: ConfigurationSpace) -> dict[int, pd.DataFrame]:
-    # TODO: unimplemented
+    """Filters data according to the configuration space cfg_space, and
+    returns the data that fits. Columns in data not present as parameter
+    in cfg_space are ignored, and NA values are always accepted.
+    """
+    # TODO: unimplemented. might have to round data as in prepare_data
     return data
 
 
 def impute_data(data: dict[int, pd.DataFrame],
                 cfg_space: ConfigurationSpace) \
         -> tuple[dict[int, pd.DataFrame], ConfigurationSpace]:
+    """Imputes the data with a value out of range. The range is specified
+    by cfg_space, and we return the imputed data, as well as an extended
+    configuration space that includes the imputed values.
+    """
     # TODO: impute using some value out of range, instead of default
     # This should return a new configspace, that also includes the
     # imputed values.
@@ -73,6 +87,11 @@ def impute_data(data: dict[int, pd.DataFrame],
 
 def prepare_data(data: dict[int, pd.DataFrame],
                  cfg_space: ConfigurationSpace) -> dict[int, pd.DataFrame]:
+    """Prepares the data for fANOVA. This includes rounding numeric data
+    to a certain amount of decimal digits, and converting categorical and
+    constant hyperparameters to numeric values. The data should already
+    have been imputed.
+    """
     res = {}
 
     for task, task_data in data.items():
@@ -94,7 +113,13 @@ def prepare_data(data: dict[int, pd.DataFrame],
 
 def run_fanova(data: dict[int, pd.DataFrame],
                cfg_space: ConfigurationSpace,
-               min_runs: int) -> pd.DataFrame:
+               min_runs: int = 0) -> pd.DataFrame:
+    """Run fANOVA on data, which contains imputed and prepared setups and
+    evals that fit in the configuration space cfg_space. Ignore tasks that
+    do not have at least min_runs runs. Returns a dataframe with relative
+    importance of parameters in certain tasks, with the tasks as index and
+    parameters as columns.
+    """
     results = {}
 
     for task, task_data in data.items():
