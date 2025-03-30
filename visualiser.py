@@ -19,7 +19,8 @@ def violinplot(fanova_results: pd.DataFrame,
                                 y=plot_data[hp].tolist(),
                                 name=hp,
                                 box_visible=True,
-                                meanline_visible=True))
+                                meanline_visible=True,
+                                spanmode='hard'))
 
     fig.update_layout(title="Variance Contribution of Hyperparameters",
                       yaxis_title="Variance Contribution",

@@ -21,6 +21,8 @@ cfg_space = fnvs.auto_configspace(data)
 # Have the user edit the cfg_space as often as they want,
 # and filter every time with new cfg_space
 filtered_data = fnvs.filter_data(data, cfg_space)
+
+# Finally we prepare to run fanova
 imputed_data, extended_cfg_space = fnvs.impute_data(filtered_data, cfg_space)
 processed_data = fnvs.prepare_data(imputed_data, extended_cfg_space)
 results = fnvs.run_fanova(processed_data, extended_cfg_space, min_runs)
