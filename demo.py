@@ -5,14 +5,14 @@ import visualiser as vis
 flow_id = 6969
 suite_id = 99
 min_runs = 100
-max_runs = 250
+max_runs = 200
 
 # The task loop is not inside the functions,
 # because we will probably download one task,
 # send an update to the site, and continue with the next
 tasks = omlf.fetch_tasks(suite_id)
 data = {}
-for task in tasks[:10]:
+for task in tasks[:20]:
     data[task] = omlf.fetch_runs(flow_id, task, max_runs)
 
 # All these steps have to be executed in this order, and

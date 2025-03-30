@@ -73,16 +73,21 @@ def impute_data(data: dict[int, pd.DataFrame],
 
 def prepare_data(data: dict[int, pd.DataFrame],
                  cfg_space: ConfigurationSpace) -> dict[int, pd.DataFrame]:
-    res = data.apply(np.round, decimals=ROUND_PLACES)
+    res = {}
 
-    for param_name in cfg_space:
-        param = cfg_space[param_name]
-        if isinstance(param, CategoricalHyperparameter):
-            res[param_name] = \
-                res[param_name].map((lambda option:
-                                     param.choices.index(option)))
-        elif isinstance(param, Constant):
-            res[param_name] = 0
+    for task, task_data in data.items():
+        prep = task_data.apply(np.round, decimals=ROUND_PLACES)
+
+        for param_name in cfg_space:
+            param = cfg_space[param_name]
+            if isinstance(param, CategoricalHyperparameter):
+                prep[param_name] = \
+                    prep[param_name].map((lambda option:
+                                          param.choices.index(option)))
+            elif isinstance(param, Constant):
+                prep[param_name] = 0
+
+        res[task] = prep
 
     return res
 
