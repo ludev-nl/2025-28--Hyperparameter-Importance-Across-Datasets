@@ -29,8 +29,8 @@ jobs:
 
   unit_tests:
     # Reactivate these two lines if you get cryptic cache errors
-    # needs: static_analysis
-    # if: ${{ always() }}
+    needs: static_analysis
+    if: ${{ always() }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
