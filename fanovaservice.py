@@ -111,42 +111,36 @@ def prepare_data(data: dict[int, pd.DataFrame],
     return res
 
 
-def run_fanova(data: dict[int, pd.DataFrame],
+def run_fanova(task_data: pd.DataFrame,
                cfg_space: ConfigurationSpace,
-               min_runs: int = 0) -> pd.DataFrame:
-    """Run fANOVA on data, which contains imputed and prepared setups and
-    evals that fit in the configuration space cfg_space. Ignore tasks that
-    do not have at least min_runs runs. Returns a dataframe with relative
-    importance of parameters in certain tasks, with the tasks as index and
-    parameters as columns.
+               min_runs: int = 0) -> dict[str, float]:
+    """Run fANOVA on data for one task, which contains imputed and prepared
+    setups and evals that fit in the configuration space cfg_space. If the
+    task does not have at least min_runs runs, return None. Returns a dict
+    with relative importance indexed by parameter name.
     """
-    results = {}
+    if len(task_data) < min_runs:
+        return None
 
-    for task, task_data in data.items():
-        if len(task_data) < min_runs:
+    X = task_data.drop(columns=['value'])
+    Y = task_data.value.to_numpy()
+
+    fnv = fANOVA(X, Y, config_space=cfg_space)
+
+    result = {}
+    index = -1
+
+    for param in cfg_space:
+        index += 1
+        if isinstance(cfg_space[param], Constant):
             continue
 
-        X = task_data.drop(columns=['value'])
-        Y = task_data.value.to_numpy()
+        score = fnv.quantify_importance((index,))[(index,)]
+        result[param] = score['individual importance']
 
-        fnv = fANOVA(X, Y, config_space=cfg_space)
+    # TODO: pairwise marginals
 
-        result = {}
-        index = -1
-
-        for param in cfg_space:
-            index += 1
-            if isinstance(cfg_space[param], Constant):
-                continue
-
-            score = fnv.quantify_importance((index,))[(index,)]
-            result[param] = score['individual importance']
-
-        # TODO: pairwise marginals
-
-        results[task] = result
-
-    return pd.DataFrame.from_dict(results, orient='index')
+    return result
 
 
 def export_csv(flow_id: int,

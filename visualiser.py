@@ -18,9 +18,10 @@ def violinplot(fanova_results: pd.DataFrame,
     hyperparameters = list(plot_data.columns)
 
     for hp in hyperparameters:
-        fig.add_trace(go.Violin(x=[hp]*(plot_data.shape[0]),
+        name = hp[0].upper() + hp[1:].replace('_', ' ')
+        fig.add_trace(go.Violin(x=[name]*(plot_data.shape[0]),
                                 y=plot_data[hp].tolist(),
-                                name=hp,
+                                name=name,
                                 box_visible=True,
                                 meanline_visible=True,
                                 spanmode='hard'))
