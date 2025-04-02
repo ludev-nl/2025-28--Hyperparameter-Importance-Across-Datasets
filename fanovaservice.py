@@ -85,7 +85,8 @@ def impute_data(data: dict[int, pd.DataFrame],
         -> tuple[dict[int, pd.DataFrame], ConfigurationSpace]:
     """Imputes the data with a value out of range. The range is specified
     by cfg_space, and we return the imputed data, as well as an extended
-    configuration space that includes the imputed values.
+    configuration space that includes the imputed values. Columns containing
+    only missing values are removed.
     """
     # TODO: impute using some value out of range, instead of default
     # This should return a new configspace, that also includes the
@@ -95,7 +96,7 @@ def impute_data(data: dict[int, pd.DataFrame],
 
     for task, task_data in data.items():
         imputed_data[task] = \
-            task_data[cfg_space.keys()].fillna(default)
+            task_data[['value'] + list(cfg_space.keys())].fillna(default)
 
     return imputed_data, cfg_space
 

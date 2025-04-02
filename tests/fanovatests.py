@@ -2,7 +2,7 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
+from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, Constant
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
 import fanovaservice as fnvs
@@ -12,7 +12,6 @@ cfg_space = ConfigurationSpace({'int': (0,5),
                                 'float': (0.0, 5.0),
                                 'cat': ['a', 'b', 'c'],
                                 'const': 'value'})
-min_runs = 300
 
 
 class FanovaTests(unittest.TestCase):
@@ -85,7 +84,32 @@ class FanovaTests(unittest.TestCase):
         # TODO: what prepared data to use?
         # Test only tasks with enough data appear in result
         # Test that no Constant parameter appears in result
-        pass
+        def prep(val: str) -> int:
+            if val == 'b':
+                return 1
+            elif val == 'c':
+                return 2
+            return 0
+
+        # Prepare the data using stub implementations
+        default = dict(cfg_space.get_default_configuration())
+        imputed = self.data[0].fillna(default)
+        prepared = imputed.map(lambda x: prep(x) if isinstance(x, str) else x)
+        prepared = prepared[['value'] + list(cfg_space.keys())]
+
+        # Run fANOVA once succesfully
+        result = fnvs.run_fanova(prepared, cfg_space, min_runs=0)
+        # And check that all non-constant hyperparams appear
+        for param_name, param in cfg_space.items():
+            if isinstance(param, Constant):
+                self.assertNotIn(param_name, result.keys())
+            else:
+                self.assertIn(param_name, result.keys())
+
+        # Run fANOVA once unsuccesfully
+        result = fnvs.run_fanova(prepared, cfg_space, min_runs=len(prepared)+1)
+        self.assertIsNone(result)
+
 
 
 if __name__ == '__main__':
