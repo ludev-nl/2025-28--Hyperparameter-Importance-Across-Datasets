@@ -2,57 +2,79 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from ConfigSpace import ConfigurationSpace
+from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
 
 import fanovaservice as fnvs
 
 
-tasks = [3, 6, 11, 12, 14]
+cfg_space = ConfigurationSpace({'int': (0,5),
+                                'float': (0.0, 5.0),
+                                'cat': ['a', 'b', 'c'],
+                                'const': 'value'})
 min_runs = 300
 
 
 class FanovaTests(unittest.TestCase):
 
     def setUp(self):
-        self.data = {t: pd.read_csv(f'tests/data/t{t}').convert_dtypes()
-                     for t in tasks}
-        # TODO: maybe correct cfg space
+        self.data = {0: pd.read_csv('tests/sample.csv', index_col=0).convert_dtypes()}
 
     def test_cfg_space(self):
-        cfg_space = fnvs.auto_configspace(self.data)
-        self.assertIsInstance(cfg_space, ConfigurationSpace)
+        auto_cfg_space = fnvs.auto_configspace(self.data)
+        self.assertIsInstance(auto_cfg_space, ConfigurationSpace)
+        self.assertSetEqual(set(auto_cfg_space.keys()), set(cfg_space.keys()))
 
-        # Concatenate all data for ease
-        data_list = list(self.data.values())
-        all_data = pd.concat(data_list).dropna(axis=1, how='all')
+        for param_name, correct_param in cfg_space.items():
+            auto_param = auto_cfg_space[param_name]
+            # For categorical hyperparams, list equality of choices is checked
+            # by default, but their order is irrelevant so we check them as sets
+            if (isinstance(correct_param, CategoricalHyperparameter)
+                    and isinstance(auto_param, CategoricalHyperparameter)):
+                self.assertSetEqual(set(auto_param.choices), set(correct_param.choices))
+            else:
+                self.assertEqual(auto_param, correct_param)
 
-        # Check that all parameters with actual values are in the space
-        valid_params = all_data.drop(columns=['value']).columns
-        self.assertSetEqual(set(valid_params), set(cfg_space.keys()))
-
-        # Check that all instances fit in the configspace
-        # NaN values are always accepted
-        for param in list(cfg_space.values()):
-            values = np.array(all_data[param.name].dropna())
-            valid = param.legal_value(values).all()
-            self.assertTrue(valid, f'Invalid values for f{param.name} found!')
+        self.assertEqual(auto_cfg_space, cfg_space)
 
     def test_filter(self):
-        # TODO: filtering not implemented, so this test can not be made yet
-        # test on smaller subset of which you know which instances should
-        # remain
-        pass
+        filter_space = ConfigurationSpace({'int': (0,4),
+                                           'float': (1.0, 5.0),
+                                           'cat': ['a', 'c'],
+                                           'const': 'value'})
+
+        # Filter the data, and determine what it should be
+        filtered = fnvs.filter_data(self.data, filter_space)[0]
+        data = self.data[0]
+        correct = data[((data.cat != 'b') | data.cat.isna())
+                       & ((data.int != 5) | data.int.isna())
+                       & ((data.float >= 1.0) | data.float.isna())]
+
+        # Check we filtered correctly
+        self.assertIsInstance(filtered, pd.DataFrame)
+        self.assertListEqual(list(filtered.columns), list(correct.columns))
+        self.assertListEqual(list(filtered.index), list(correct.index))
 
     def test_impute(self):
-        # TODO: what cfg space to use? hardcoded?
-        # Test all instances fit in new cfg space, which should not be bigger
-        # than necessary. Test no nan values left.
-        pass
+        imputed_data, new_space = fnvs.impute_data(self.data, cfg_space)
+        data = imputed_data[0]
+
+        # Assert that there are no missing values anymore
+        self.assertIsInstance(data, pd.DataFrame)
+        self.assertFalse(data.isna().any().any())
+
+        # Assert that the new data fits in the new config space
+        for param_name in new_space:
+            param = new_space[param_name]
+            values = np.array(data[param_name])
+            self.assertTrue(param.legal_value(values).all())
 
     def test_prepare(self):
         # TODO: what imputed data to use? Or just dropna here?
         # Test further rounding does not do anything, and that all data is
         # numerical
+        default = dict(cfg_space.get_default_configuration())
+        imputed = self.data[0].fillna(default)
+
         pass
 
     def test_run(self):

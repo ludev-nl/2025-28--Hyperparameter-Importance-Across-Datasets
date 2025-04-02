@@ -61,8 +61,23 @@ def filter_data(data: dict[int, pd.DataFrame],
     returns the data that fits. Columns in data not present as parameter
     in cfg_space are ignored, and NA values are always accepted.
     """
-    # TODO: unimplemented. might have to round data as in prepare_data
-    return data
+    result = {}
+    default = dict(cfg_space.get_default_configuration())
+
+    for task, task_data in data.items():
+        copy = task_data.copy(deep=True)
+        valid = pd.Series([True for _ in range(len(copy))])
+
+        for param_name in cfg_space:
+            param = cfg_space[param_name]
+            valid_p = copy[param_name].map(lambda x:
+                                           True if pd.isna(x)
+                                           else param.legal_value(x))
+            valid = (valid) & (valid_p)
+
+        result[task] = copy[valid]
+
+    return result
 
 
 def impute_data(data: dict[int, pd.DataFrame],
@@ -80,7 +95,7 @@ def impute_data(data: dict[int, pd.DataFrame],
 
     for task, task_data in data.items():
         imputed_data[task] = \
-            task_data.dropna(axis=1, how='all').fillna(default)
+            task_data[cfg_space.keys()].fillna(default)
 
     return imputed_data, cfg_space
 
