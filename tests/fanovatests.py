@@ -8,7 +8,7 @@ from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 import fanovaservice as fnvs
 
 
-cfg_space = ConfigurationSpace({'int': (0,5),
+cfg_space = ConfigurationSpace({'int': (0, 5),
                                 'float': (0.0, 5.0),
                                 'cat': ['a', 'b', 'c'],
                                 'const': 'value'})
@@ -17,7 +17,7 @@ cfg_space = ConfigurationSpace({'int': (0,5),
 class FanovaTests(unittest.TestCase):
 
     def setUp(self):
-        self.data = {0: pd.read_csv('tests/sample.csv', index_col=0).convert_dtypes()}
+        self.data = {0: pd.read_csv('tests/sample.csv', index_col=0)}
 
     def test_cfg_space(self):
         auto_cfg_space = fnvs.auto_configspace(self.data)
@@ -28,15 +28,16 @@ class FanovaTests(unittest.TestCase):
         for param_name, correct_param in cfg_space.items():
             auto_param = auto_cfg_space[param_name]
             # For categorical hyperparams, list equality of choices is checked
-            # by default, but their order is irrelevant so we check them as sets
+            # by default, but order is irrelevant so we check them as sets
             if (isinstance(correct_param, CategoricalHyperparameter)
                     and isinstance(auto_param, CategoricalHyperparameter)):
-                self.assertSetEqual(set(auto_param.choices), set(correct_param.choices))
+                self.assertSetEqual(set(auto_param.choices),
+                                    set(correct_param.choices))
             else:
                 self.assertEqual(auto_param, correct_param)
 
     def test_filter(self):
-        filter_space = ConfigurationSpace({'int': (0,4),
+        filter_space = ConfigurationSpace({'int': (0, 4),
                                            'float': (1.0, 5.0),
                                            'cat': ['a', 'c'],
                                            'const': 'value'})
@@ -109,7 +110,6 @@ class FanovaTests(unittest.TestCase):
         # Run fANOVA once unsuccesfully
         result = fnvs.run_fanova(prepared, cfg_space, min_runs=len(prepared)+1)
         self.assertIsNone(result)
-
 
 
 if __name__ == '__main__':

@@ -63,11 +63,10 @@ def filter_data(data: dict[int, pd.DataFrame],
     in cfg_space are ignored, and NA values are always accepted.
     """
     result = {}
-    default = dict(cfg_space.get_default_configuration())
 
     for task, task_data in data.items():
         copy = task_data.copy(deep=True)
-        valid = pd.Series([True for _ in range(len(copy))])
+        valid = pd.Series([True for _ in range(len(copy))], index=copy.index)
 
         for param_name, param in cfg_space.items():
             valid_p = copy[param_name].map(lambda x:
@@ -92,27 +91,43 @@ def impute_data(data: dict[int, pd.DataFrame],
     impute_vals = {}
     # New configspace including imputed values
     cfg_dict = {}
+
     for param_name, param in cfg_space.items():
+        # If a parameter has no missing values, skip it
+        missing = False
+        for task_data in data.values():
+            missing |= task_data[param_name].isna().any()
+
         # Constant params become categorical by adding an impute value
         if isinstance(param, Constant):
-            impute_vals[param_name] = 'IMPUTE_HPIAD'
-            # Ensure impute value was not yet present
-            while impute_vals[param_name] == param.value:
-                impute_vals[param_name] = '_' + impute_vals[param_name]
-            cfg_dict[param_name] = [param.value, impute_vals[param_name]]
+            if missing:
+                impute_vals[param_name] = 'IMPUTE_HPIAD'
+                # Ensure impute value was not yet present
+                while impute_vals[param_name] == param.value:
+                    impute_vals[param_name] = '_' + impute_vals[param_name]
+                cfg_dict[param_name] = [param.value, impute_vals[param_name]]
+            else:
+                cfg_dict[param_name] = param.value
 
         # Categorical params get an extra impute value
         elif isinstance(param, CategoricalHyperparameter):
-            impute_vals[param_name] = 'IMPUTE_HPIAD'
-            # Ensure impute value was not yet present
-            while impute_vals[param_name] in param.choices:
-                impute_vals[param_name] = '_' + impute_vals[param_name]
-            cfg_dict[param_name] = list(param.choices) + [impute_vals[param_name]]
+            if missing:
+                impute_vals[param_name] = 'IMPUTE_HPIAD'
+                # Ensure impute value was not yet present
+                while impute_vals[param_name] in param.choices:
+                    impute_vals[param_name] = '_' + impute_vals[param_name]
+                cfg_dict[param_name] = \
+                    list(param.choices) + [impute_vals[param_name]]
+            else:
+                cfg_dict[param_name] = list(param.choices)
 
         # Numerical params are imputed with one below their lower bound
         elif isinstance(param, NumericalHyperparameter):
-            impute_vals[param_name] = param.lower - 1
-            cfg_dict[param_name] = (param.lower - 1, param.upper)
+            if missing:
+                impute_vals[param_name] = param.lower - 1
+                cfg_dict[param_name] = (param.lower - 1, param.upper)
+            else:
+                cfg_dict[param_name] = (param.lower, param.upper)
 
     # The resulting data
     imputed_data = {}
@@ -144,7 +159,7 @@ def prepare_data(data: dict[int, pd.DataFrame],
             elif isinstance(param, Constant):
                 prep[param_name] = 0
 
-        res[task] = prep.convert_dtypes()
+        res[task] = prep.astype(np.float64)
 
     return res
 

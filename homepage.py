@@ -1,14 +1,17 @@
 import dash
 from dash import Input, Output, dcc, html
-import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-example_table = {"ID": ['00001', '00002','00003','00004'], "Started in": ['20/04 10:30', '21/04 11:30','22/04 10:30','23/04 10:35']}
-df = pd.DataFrame(example_table)
-print(df)
 
+example_table = {"ID": ['00001', '00002', '00003', '00004'],
+                 "Started in": ['20/04 10:30',
+                                '21/04 11:30',
+                                '22/04 10:30',
+                                '23/04 10:35']}
+df = pd.DataFrame(example_table)
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
+
 
 def generate_table(dataframe, max_rows=10):
     return html.Table([
@@ -20,7 +23,8 @@ def generate_table(dataframe, max_rows=10):
                 html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
             ]) for i in range(min(len(dataframe), max_rows))
         ])
-    ], style={'backgroundColor':'#f8f9fa'})
+    ], style={'backgroundColor': '#f8f9fa'})
+
 
 SIDEBAR_STYLE = {
     "position": "fixed",
@@ -47,7 +51,9 @@ sidebar = html.Div(
             [
                 dbc.NavLink("Home", href="/", active="exact"),
                 dbc.NavLink("Task Selection", href="/page-1", active="exact"),
-                dbc.NavLink("Experiment Management", href="/page-2", active="exact"),
+                dbc.NavLink("Experiment Management",
+                            href="/page-2",
+                            active="exact"),
                 dbc.NavLink("Analysis", href="/page-3", active="exact"),
                 dbc.NavLink("Results", href="/page-4", active="exact"),
             ],
@@ -68,18 +74,34 @@ def render_page_content(pathname):
     if pathname == "/":
         return html.Div(
             [
-            dbc.Row(
-              [
-                  dbc.Col(html.Div([html.Center(html.H4(children='Completed Analysis')), html.Center(generate_table(df))]), width=3),
-                  dbc.Col(html.Div([html.Center(html.H4(children='Ongoing Analysis')), html.Center(generate_table(df))]), width=3)
-              ]
-            ),
-            dbc.Row(
-              [
-                  dbc.Col(html.Div(html.Center(dbc.Button("Start New Analysis", color="primary", className="me-1"))), width=6)
-              ]
-          )
-          ]
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            html.Div(
+                                [html.Center(
+                                    html.H4(children='Completed Analysis')),
+                                    html.Center(generate_table(df))]),
+                            width=3),
+                        dbc.Col(
+                            html.Div(
+                                [html.Center(
+                                    html.H4(children='Ongoing Analysis')),
+                                    html.Center(generate_table(df))]),
+                            width=3)
+                    ]
+                ),
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            html.Div(
+                                html.Center(
+                                    dbc.Button("Start New Analysis",
+                                               color="primary",
+                                               className="me-1"))),
+                            width=6)
+                    ]
+                )
+            ]
         )
     elif pathname == "/page-1":
         return html.P("Task Selection Page")
@@ -103,4 +125,3 @@ def render_page_content(pathname):
 
 if __name__ == "__main__":
     app.run(port=8888)
-
