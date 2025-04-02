@@ -1,5 +1,6 @@
 import unittest
 import pandas as pd
+import numpy as np
 
 from ConfigSpace import ConfigurationSpace
 
@@ -20,7 +21,21 @@ class FanovaTests(unittest.TestCase):
     def test_cfg_space(self):
         cfg_space = fnvs.auto_configspace(self.data)
         self.assertIsInstance(cfg_space, ConfigurationSpace)
-        # TODO: test all instances fit, only constant NaN columns not present
+
+        # Concatenate all data for ease
+        data_list = list(self.data.values())
+        all_data = pd.concat(data_list).dropna(axis=1, how='all')
+
+        # Check that all parameters with actual values are in the space
+        valid_params = all_data.drop(columns=['value']).columns
+        self.assertSetEqual(set(valid_params), set(cfg_space.keys()))
+
+        # Check that all instances fit in the configspace
+        # NaN values are always accepted
+        for param in list(cfg_space.values()):
+            values = np.array(all_data[param.name].dropna())
+            valid = param.legal_value(values).all()
+            self.assertTrue(valid, f'Invalid values for f{param.name} found!')
 
     def test_filter(self):
         # TODO: filtering not implemented, so this test can not be made yet

@@ -2,3 +2,5 @@ git+https://github.com/automl/fanova@master
 openml
 plotly
 flake8
+dash
+dash_bootstrap_components

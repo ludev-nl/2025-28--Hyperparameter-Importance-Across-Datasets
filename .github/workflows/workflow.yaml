@@ -47,6 +47,7 @@ jobs:
       - uses: mmomtchev/setup-swig@v1
         with:
           version: v3.0.12
+          token: ${{ github.token }}
           cache: true
 
       - run: pip install -r requirements.txt
