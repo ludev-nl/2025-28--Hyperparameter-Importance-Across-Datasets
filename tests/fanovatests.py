@@ -1,50 +1,116 @@
 import unittest
 import pandas as pd
+import numpy as np
 
-from ConfigSpace import ConfigurationSpace
+from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, Constant
+from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
 import fanovaservice as fnvs
 
 
-tasks = [3, 6, 11, 12, 14]
-min_runs = 300
+cfg_space = ConfigurationSpace({'int': (0, 5),
+                                'float': (0.0, 5.0),
+                                'cat': ['a', 'b', 'c'],
+                                'const': 'value'})
 
 
 class FanovaTests(unittest.TestCase):
 
     def setUp(self):
-        self.data = {t: pd.read_csv(f'tests/data/t{t}').convert_dtypes()
-                     for t in tasks}
-        # TODO: maybe correct cfg space
+        self.data = \
+            {0: pd.read_csv('tests/sample.csv', index_col=0).convert_dtypes()}
 
     def test_cfg_space(self):
-        cfg_space = fnvs.auto_configspace(self.data)
-        self.assertIsInstance(cfg_space, ConfigurationSpace)
-        # TODO: test all instances fit, only constant NaN columns not present
+        auto_cfg_space = fnvs.auto_configspace(self.data)
+        self.assertIsInstance(auto_cfg_space, ConfigurationSpace)
+        self.assertSetEqual(set(auto_cfg_space.keys()), set(cfg_space.keys()))
+
+        # Check that all hyperparams are as they should be
+        for param_name, correct_param in cfg_space.items():
+            auto_param = auto_cfg_space[param_name]
+            # For categorical hyperparams, list equality of choices is checked
+            # by default, but order is irrelevant so we check them as sets
+            if (isinstance(correct_param, CategoricalHyperparameter)
+                    and isinstance(auto_param, CategoricalHyperparameter)):
+                self.assertSetEqual(set(auto_param.choices),
+                                    set(correct_param.choices))
+            else:
+                self.assertEqual(auto_param, correct_param)
 
     def test_filter(self):
-        # TODO: filtering not implemented, so this test can not be made yet
-        # test on smaller subset of which you know which instances should
-        # remain
-        pass
+        filter_space = ConfigurationSpace({'int': (0, 4),
+                                           'float': (1.0, 5.0),
+                                           'cat': ['a', 'c'],
+                                           'const': 'value'})
+
+        # Filter the data, and determine what it should be
+        filtered = fnvs.filter_data(self.data, filter_space)[0]
+        data = self.data[0]
+        correct = data[((data.cat != 'b') | data.cat.isna())
+                       & ((data.int != 5) | data.int.isna())
+                       & ((data.float >= 1.0) | data.float.isna())]
+
+        # Check we filtered correctly
+        self.assertIsInstance(filtered, pd.DataFrame)
+        self.assertTrue(filtered.equals(correct))
 
     def test_impute(self):
-        # TODO: what cfg space to use? hardcoded?
-        # Test all instances fit in new cfg space, which should not be bigger
-        # than necessary. Test no nan values left.
-        pass
+        imputed_data, new_space = fnvs.impute_data(self.data, cfg_space)
+        data = imputed_data[0]
+
+        # Assert that there are no missing values anymore
+        self.assertIsInstance(data, pd.DataFrame)
+        self.assertFalse(data.isna().any().any())
+
+        # Assert that the new data fits in the new config space
+        for param_name in new_space:
+            param = new_space[param_name]
+            values = np.array(data[param_name])
+            self.assertTrue(param.legal_value(values).all())
 
     def test_prepare(self):
-        # TODO: what imputed data to use? Or just dropna here?
-        # Test further rounding does not do anything, and that all data is
-        # numerical
-        pass
+        default = dict(cfg_space.get_default_configuration())
+        imputed = self.data[0].fillna(default)
+        prepared = fnvs.prepare_data({0: imputed}, cfg_space)[0]
+        self.assertIsInstance(prepared, pd.DataFrame)
+
+        # Test that all numerical data has already been rounded
+        rounded = prepared.apply(np.round, decimals=ROUND_PLACES)
+        self.assertTrue(prepared.equals(rounded))
+
+        # Test that all data is now numerical
+        non_numeric = prepared.select_dtypes(exclude=['number']).columns
+        self.assertEqual(len(non_numeric), 0)
 
     def test_run(self):
         # TODO: what prepared data to use?
         # Test only tasks with enough data appear in result
         # Test that no Constant parameter appears in result
-        pass
+        def prep(val: str) -> int:
+            if val == 'b':
+                return 1
+            elif val == 'c':
+                return 2
+            return 0
+
+        # Prepare the data using stub implementations
+        default = dict(cfg_space.get_default_configuration())
+        imputed = self.data[0].fillna(default)
+        prepared = imputed.map(lambda x: prep(x) if isinstance(x, str) else x)
+        prepared = prepared[['value'] + list(cfg_space.keys())]
+
+        # Run fANOVA once succesfully
+        result = fnvs.run_fanova(prepared, cfg_space, min_runs=0)
+        # And check that all non-constant hyperparams appear
+        for param_name, param in cfg_space.items():
+            if isinstance(param, Constant):
+                self.assertNotIn(param_name, result.keys())
+            else:
+                self.assertIn(param_name, result.keys())
+
+        # Run fANOVA once unsuccesfully
+        result = fnvs.run_fanova(prepared, cfg_space, min_runs=len(prepared)+1)
+        self.assertIsNone(result)
 
 
 if __name__ == '__main__':
