@@ -17,7 +17,8 @@ cfg_space = ConfigurationSpace({'int': (0, 5),
 class FanovaTests(unittest.TestCase):
 
     def setUp(self):
-        self.data = {0: pd.read_csv('tests/sample.csv', index_col=0)}
+        self.data = \
+            {0: pd.read_csv('tests/sample.csv', index_col=0).convert_dtypes()}
 
     def test_cfg_space(self):
         auto_cfg_space = fnvs.auto_configspace(self.data)

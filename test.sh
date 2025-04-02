@@ -1,2 +1,2 @@
 python3 -m flake8
-python3 -m unittest tests/*.py
+python3 -W ignore::DeprecationWarning -m unittest tests/*.py
