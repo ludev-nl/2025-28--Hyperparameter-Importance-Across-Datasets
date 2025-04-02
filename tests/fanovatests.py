@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
+from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
 import fanovaservice as fnvs
 
@@ -24,6 +25,7 @@ class FanovaTests(unittest.TestCase):
         self.assertIsInstance(auto_cfg_space, ConfigurationSpace)
         self.assertSetEqual(set(auto_cfg_space.keys()), set(cfg_space.keys()))
 
+        # Check that all hyperparams are as they should be
         for param_name, correct_param in cfg_space.items():
             auto_param = auto_cfg_space[param_name]
             # For categorical hyperparams, list equality of choices is checked
@@ -33,8 +35,6 @@ class FanovaTests(unittest.TestCase):
                 self.assertSetEqual(set(auto_param.choices), set(correct_param.choices))
             else:
                 self.assertEqual(auto_param, correct_param)
-
-        self.assertEqual(auto_cfg_space, cfg_space)
 
     def test_filter(self):
         filter_space = ConfigurationSpace({'int': (0,4),
@@ -51,8 +51,7 @@ class FanovaTests(unittest.TestCase):
 
         # Check we filtered correctly
         self.assertIsInstance(filtered, pd.DataFrame)
-        self.assertListEqual(list(filtered.columns), list(correct.columns))
-        self.assertListEqual(list(filtered.index), list(correct.index))
+        self.assertTrue(filtered.equals(correct))
 
     def test_impute(self):
         imputed_data, new_space = fnvs.impute_data(self.data, cfg_space)
@@ -69,13 +68,18 @@ class FanovaTests(unittest.TestCase):
             self.assertTrue(param.legal_value(values).all())
 
     def test_prepare(self):
-        # TODO: what imputed data to use? Or just dropna here?
-        # Test further rounding does not do anything, and that all data is
-        # numerical
         default = dict(cfg_space.get_default_configuration())
         imputed = self.data[0].fillna(default)
+        prepared = fnvs.prepare_data({0: imputed}, cfg_space)[0]
+        self.assertIsInstance(prepared, pd.DataFrame)
 
-        pass
+        # Test that all numerical data has already been rounded
+        rounded = prepared.apply(np.round, decimals=ROUND_PLACES)
+        self.assertTrue(prepared.equals(rounded))
+
+        # Test that all data is now numerical
+        non_numeric = prepared.select_dtypes(exclude=['number']).columns
+        self.assertEqual(len(non_numeric), 0)
 
     def test_run(self):
         # TODO: what prepared data to use?

@@ -121,7 +121,7 @@ def prepare_data(data: dict[int, pd.DataFrame],
             elif isinstance(param, Constant):
                 prep[param_name] = 0
 
-        res[task] = prep
+        res[task] = prep.convert_dtypes()
 
     return res
 
