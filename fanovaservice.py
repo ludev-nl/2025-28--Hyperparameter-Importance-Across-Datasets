@@ -3,8 +3,9 @@ import pandas as pd
 
 from fanova import fANOVA
 from ConfigSpace import ConfigurationSpace
-from ConfigSpace import CategoricalHyperparameter
 from ConfigSpace import Constant
+from ConfigSpace import CategoricalHyperparameter
+from ConfigSpace.hyperparameters import NumericalHyperparameter
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
 
@@ -68,8 +69,7 @@ def filter_data(data: dict[int, pd.DataFrame],
         copy = task_data.copy(deep=True)
         valid = pd.Series([True for _ in range(len(copy))])
 
-        for param_name in cfg_space:
-            param = cfg_space[param_name]
+        for param_name, param in cfg_space.items():
             valid_p = copy[param_name].map(lambda x:
                                            True if pd.isna(x)
                                            else param.legal_value(x))
@@ -88,17 +88,40 @@ def impute_data(data: dict[int, pd.DataFrame],
     configuration space that includes the imputed values. Columns containing
     only missing values are removed.
     """
-    # TODO: impute using some value out of range, instead of default
-    # This should return a new configspace, that also includes the
-    # imputed values.
+    # The values to impute with
+    impute_vals = {}
+    # New configspace including imputed values
+    cfg_dict = {}
+    for param_name, param in cfg_space.items():
+        # Constant params become categorical by adding an impute value
+        if isinstance(param, Constant):
+            impute_vals[param_name] = 'IMPUTE_HPIAD'
+            # Ensure impute value was not yet present
+            while impute_vals[param_name] == param.value:
+                impute_vals[param_name] = '_' + impute_vals[param_name]
+            cfg_dict[param_name] = [param.value, impute_vals[param_name]]
+
+        # Categorical params get an extra impute value
+        elif isinstance(param, CategoricalHyperparameter):
+            impute_vals[param_name] = 'IMPUTE_HPIAD'
+            # Ensure impute value was not yet present
+            while impute_vals[param_name] in param.choices:
+                impute_vals[param_name] = '_' + impute_vals[param_name]
+            cfg_dict[param_name] = list(param.choices) + [impute_vals[param_name]]
+
+        # Numerical params are imputed with one below their lower bound
+        elif isinstance(param, NumericalHyperparameter):
+            impute_vals[param_name] = param.lower - 1
+            cfg_dict[param_name] = (param.lower - 1, param.upper)
+
+    # The resulting data
     imputed_data = {}
-    default = dict(cfg_space.get_default_configuration())
 
     for task, task_data in data.items():
         imputed_data[task] = \
-            task_data[['value'] + list(cfg_space.keys())].fillna(default)
+            task_data[['value'] + list(cfg_space.keys())].fillna(impute_vals)
 
-    return imputed_data, cfg_space
+    return imputed_data, ConfigurationSpace(cfg_dict)
 
 
 def prepare_data(data: dict[int, pd.DataFrame],
@@ -113,8 +136,7 @@ def prepare_data(data: dict[int, pd.DataFrame],
     for task, task_data in data.items():
         prep = task_data.apply(np.round, decimals=ROUND_PLACES)
 
-        for param_name in cfg_space:
-            param = cfg_space[param_name]
+        for param_name, param in cfg_space.items():
             if isinstance(param, CategoricalHyperparameter):
                 prep[param_name] = \
                     prep[param_name].map((lambda option:
@@ -146,13 +168,13 @@ def run_fanova(task_data: pd.DataFrame,
     result = {}
     index = -1
 
-    for param in cfg_space:
+    for param_name, param in cfg_space.items():
         index += 1
-        if isinstance(cfg_space[param], Constant):
+        if isinstance(param, Constant):
             continue
 
         score = fnv.quantify_importance((index,))[(index,)]
-        result[param] = score['individual importance']
+        result[param_name] = score['individual importance']
 
     # TODO: pairwise marginals
 
