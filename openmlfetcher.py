@@ -7,7 +7,7 @@ import pandas as pd
 from openml import study, evaluations, setups, exceptions
 
 
-def fetch_tasks(suite_id: int) -> list[int]:
+def fetch_tasks(suite_id: int) -> list[int] | None:
     """Fetch the list of task IDs in the benchmark suite specified
     by suite_id. Returns None if the suite does not exist.
     """
@@ -25,7 +25,7 @@ def fetch_tasks(suite_id: int) -> list[int]:
 
 def fetch_runs(flow_id: int,
                task_id: int,
-               max_runs: int = None) -> pd.DataFrame:
+               max_runs: int | None = None) -> pd.DataFrame | None:
     """Fetch the hyperparameter setups and resulting evaluations
     for the algorithm with flow_id in th task with task_id, in a
     dataframe with index run_id and value and parameters in all
@@ -51,7 +51,7 @@ def fetch_runs(flow_id: int,
     batch_size = 250
     while offset < tot:
         batch = setups.list_setups(setup=ids[offset:(offset+batch_size)],
-                                   output_format='dataframe').parameters
+                                   output_format='dataframe')['parameters']
         batches.append(batch)
         offset += batch_size
 
