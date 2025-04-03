@@ -60,7 +60,8 @@ class FanovaTests(unittest.TestCase):
                                            'full_int': (0, 5),
                                            'float': (1.0, 5.0),
                                            'cat': ['a', 'c', 'IMPUTE_HPIAD'],
-                                           'full_cat': ['a', 'b', 'c', 'IMPUTE_HPIAD'],
+                                           'full_cat': ['a', 'b', 'c',
+                                                        'IMPUTE_HPIAD'],
                                            'const': 'IMPUTE_HPIAD',
                                            'full_const': -1})
 

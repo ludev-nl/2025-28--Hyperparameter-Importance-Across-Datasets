@@ -1,10 +1,10 @@
-name: static_analysis-unit_tests
+name: Static analysis and unit tests
 
 on: [pull_request]
 
 jobs:
 
-  static_analysis:
+  style check:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -29,8 +29,34 @@ jobs:
 
       - run: python -m mypy --disable-error-code import-untyped openmlfetcher.py fanovaservice.py
 
-  unit_tests:
-    needs: static_analysis
+  type check:
+    needs: style_check
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libpcre3 libpcre3-dev
+
+      - uses: mmomtchev/setup-swig@v1
+        with:
+          version: v3.0.12
+          token: ${{ github.token }}
+          cache: true
+
+      - run: pip install -r requirements.txt
+
+      - run: python -W ignore::DeprecationWarning -m unittest tests/*.py
+
+  unit tests:
+    needs: type_check
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     steps:

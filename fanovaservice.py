@@ -219,7 +219,7 @@ def run_fanova(task_data: pd.DataFrame,
 
 def export_csv(flow_id: int,
                suite_id: int,
-               results: pd.DataFrame) -> None: # pragma: no cover
+               results: pd.DataFrame) -> None:  # pragma: no cover
     # TODO: this is just for current testing. Eventually this
     # will be sent to Dash components without creating a file.
     # The first column is index, so dont plot that!
