@@ -27,8 +27,6 @@ jobs:
 
       - run: python -m flake8
 
-      - run: python -m mypy --disable-error-code import-untyped openmlfetcher.py fanovaservice.py
-
   type check:
     needs: style_check
     if: ${{ always() }}
@@ -53,7 +51,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - run: python -W ignore::DeprecationWarning -m unittest tests/*.py
+      - run: python3 -m mypy --disable-error-code import-untyped openmlfetcher.py fanovaservice.py visualiser.py
 
   unit tests:
     needs: type_check
