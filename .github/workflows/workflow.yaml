@@ -4,7 +4,7 @@ on: [pull_request]
 
 jobs:
 
-  style check:
+  style_check:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
 
       - run: python -m flake8
 
-  type check:
+  type_check:
     needs: style_check
     if: ${{ always() }}
     runs-on: ubuntu-24.04
@@ -53,7 +53,7 @@ jobs:
 
       - run: python3 -m mypy --disable-error-code import-untyped openmlfetcher.py fanovaservice.py visualiser.py
 
-  unit tests:
+  unit_tests:
     needs: type_check
     if: ${{ always() }}
     runs-on: ubuntu-24.04
