@@ -81,7 +81,7 @@ def coerce_types(data: pd.DataFrame) -> pd.DataFrame:
 
 def export_csv(flow_id: int,
                suite_id: int,
-               data: dict[int, pd.DataFrame]) -> None:
+               data: dict[int, pd.DataFrame]) -> None: # pragma: no cover
     # TODO: this is just for current testing. Eventually this
     # will be sent to Dash components without creating a file.
     folder_name = f'./openml_f{flow_id}_s{suite_id}/'

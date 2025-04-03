@@ -5,7 +5,6 @@ from fanova import fANOVA
 from ConfigSpace import ConfigurationSpace
 from ConfigSpace import Constant
 from ConfigSpace import CategoricalHyperparameter
-from ConfigSpace.hyperparameters import NumericalHyperparameter
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
 
@@ -122,7 +121,7 @@ def impute_data(data: dict[int, pd.DataFrame],
                 cfg_dict[param_name] = list(param.choices)
 
         # Numerical params are imputed with one below their lower bound
-        elif isinstance(param, NumericalHyperparameter):
+        else:
             if missing:
                 impute_vals[param_name] = param.lower - 1
                 cfg_dict[param_name] = (param.lower - 1, param.upper)
@@ -198,7 +197,7 @@ def run_fanova(task_data: pd.DataFrame,
 
 def export_csv(flow_id: int,
                suite_id: int,
-               results: pd.DataFrame) -> None:
+               results: pd.DataFrame) -> None: # pragma: no cover
     # TODO: this is just for current testing. Eventually this
     # will be sent to Dash components without creating a file.
     # The first column is index, so dont plot that!
