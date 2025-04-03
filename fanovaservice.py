@@ -16,7 +16,15 @@ def auto_configspace(data: dict[int, pd.DataFrame]) -> ConfigurationSpace:
     contain NA values, and parameters that are NA in all data will not
     appear in the configuration space at all.
     """
-    param_dict = {}
+    param_dict: dict[str,
+                     tuple[int, int]
+                     | tuple[float, float]
+                     | list[int | float | str]
+                     | int
+                     | float
+                     | str] = {}
+    num_dict: dict[str, tuple[int, int] | tuple[float, float]] = {}
+    cat_dict: dict[str, set[int | float | str]] = {}
 
     for _, full_data in data.items():
         params_data = full_data.drop(columns=['value'])
@@ -28,30 +36,34 @@ def auto_configspace(data: dict[int, pd.DataFrame]) -> ConfigurationSpace:
         for col in num_cols:
             min_val = params_data[col].min()
             max_val = params_data[col].max()
-            if col not in param_dict.keys():
-                param_dict[col] = (min_val, max_val)
+            if col not in num_dict.keys():
+                num_dict[col] = (min_val, max_val)
             else:
-                prev_min, prev_max = param_dict[col]
-                param_dict[col] = (min(prev_min, min_val),
-                                   max(prev_max, max_val))
+                prev_min, prev_max = num_dict[col]
+                num_dict[col] = (min(prev_min, min_val),
+                                 max(prev_max, max_val))
 
         # Unique values of categorical hyperparams
         for col in cat_cols:
             unique_values = set(params_data[col].dropna().unique())
-            if col not in param_dict.keys():
-                param_dict[col] = unique_values
+            if col not in cat_dict.keys():
+                cat_dict[col] = unique_values
             else:
-                param_dict[col] = set.union(param_dict[col], unique_values)
+                cat_dict[col] = set.union(cat_dict[col], unique_values)
 
     # Find constant parameters, and convert sets to lists
-    for param, range in param_dict.items():
-        if isinstance(range, tuple) and range[0] == range[1]:
+    for param, range in num_dict.items():
+        if range[0] == range[1]:
             param_dict[param] = range[0]
-        elif isinstance(range, set):
-            if len(range) == 1:
-                param_dict[param] = range.pop()
-            else:
-                param_dict[param] = list(range)
+        else:
+            param_dict[param] = range
+
+    for param, choices in cat_dict.items():
+        choice_list = list(choices)
+        if len(choice_list) == 1:
+            param_dict[param] = choice_list[0]
+        else:
+            param_dict[param] = choice_list
 
     return ConfigurationSpace(space=param_dict)
 
@@ -88,9 +100,16 @@ def impute_data(data: dict[int, pd.DataFrame],
     only missing values are removed.
     """
     # The values to impute with
-    impute_vals = {}
+    impute_vals: dict[str, int | float | str] = {}
     # New configspace including imputed values
-    cfg_dict = {}
+    cfg_dict: dict[str,
+                   tuple[int, int]
+                   | tuple[float, float]
+                   | list[object]
+                   | set[object]
+                   | int
+                   | float
+                   | str] = {}
 
     for param_name, param in cfg_space.items():
         # If a parameter has no missing values, skip it
@@ -101,10 +120,11 @@ def impute_data(data: dict[int, pd.DataFrame],
         # Constant params become categorical by adding an impute value
         if isinstance(param, Constant):
             if missing:
-                impute_vals[param_name] = 'IMPUTE_HPIAD'
+                impute_val = 'IMPUTE_HPIAD'
                 # Ensure impute value was not yet present
-                while impute_vals[param_name] == param.value:
-                    impute_vals[param_name] = '_' + impute_vals[param_name]
+                while impute_val == param.value:
+                    impute_val = '_' + impute_val
+                impute_vals[param_name] = impute_val
                 cfg_dict[param_name] = [param.value, impute_vals[param_name]]
             else:
                 cfg_dict[param_name] = param.value
@@ -112,10 +132,11 @@ def impute_data(data: dict[int, pd.DataFrame],
         # Categorical params get an extra impute value
         elif isinstance(param, CategoricalHyperparameter):
             if missing:
-                impute_vals[param_name] = 'IMPUTE_HPIAD'
+                impute_val = 'IMPUTE_HPIAD'
                 # Ensure impute value was not yet present
-                while impute_vals[param_name] in param.choices:
-                    impute_vals[param_name] = '_' + impute_vals[param_name]
+                while impute_val in param.choices:
+                    impute_val = '_' + impute_val
+                impute_vals[param_name] = impute_val
                 cfg_dict[param_name] = \
                     list(param.choices) + [impute_vals[param_name]]
             else:
@@ -166,7 +187,7 @@ def prepare_data(data: dict[int, pd.DataFrame],
 
 def run_fanova(task_data: pd.DataFrame,
                cfg_space: ConfigurationSpace,
-               min_runs: int = 0) -> dict[str, float]:
+               min_runs: int = 0) -> dict[str, float] | None:
     """Run fANOVA on data for one task, which contains imputed and prepared
     setups and evals that fit in the configuration space cfg_space. If the
     task does not have at least min_runs runs, return None. Returns a dict
@@ -198,7 +219,7 @@ def run_fanova(task_data: pd.DataFrame,
 
 def export_csv(flow_id: int,
                suite_id: int,
-               results: pd.DataFrame) -> None:
+               results: pd.DataFrame) -> None:  # pragma: no cover
     # TODO: this is just for current testing. Eventually this
     # will be sent to Dash components without creating a file.
     # The first column is index, so dont plot that!

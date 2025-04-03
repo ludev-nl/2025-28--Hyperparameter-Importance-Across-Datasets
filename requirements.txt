@@ -27,6 +27,8 @@ matplotlib==3.10.1
 mccabe==0.7.0
 minio==7.2.15
 more-itertools==10.6.0
+mypy==1.15.0
+mypy-extensions==1.0.0
 narwhals==1.33.0
 nest-asyncio==1.6.0
 numpy==2.2.4

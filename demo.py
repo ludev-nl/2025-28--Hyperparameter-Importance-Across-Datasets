@@ -81,7 +81,7 @@ fnvs.export_csv(flow_id, suite_id, results)
 
 section_end = time.time()
 print(f'fANOVA ran in {section_end-section_start} sec')
-# -------------------------- Visualiser -------------------------
 
+# -------------------------- Visualiser -------------------------
 vis.violinplot(results, show=True)
 vis.crit_diff_diagram(results, show=True)
