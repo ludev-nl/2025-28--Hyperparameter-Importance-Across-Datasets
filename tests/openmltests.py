@@ -21,6 +21,7 @@ class OpenMLTests(unittest.TestCase):
 
     def test_flows(self):
         flows = omlf.fetch_flows()
+        self.assertIsInstance(flows, pd.DataFrame)
         # Check the columns are correct, and that there are at least as
         # many as at the time of development
         self.assertListEqual(list(flows.columns), ['name', 'version'])
@@ -28,6 +29,7 @@ class OpenMLTests(unittest.TestCase):
 
     def test_suites(self):
         suites = omlf.fetch_suites()
+        self.assertIsInstance(suites, pd.DataFrame)
         # Check the columns are correct, and that there are at least as
         # many as at the time of development
         self.assertListEqual(list(suites.columns), ['alias'])
