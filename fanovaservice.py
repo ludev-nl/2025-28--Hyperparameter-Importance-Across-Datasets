@@ -16,6 +16,8 @@ def auto_configspace(data: dict[int, pd.DataFrame]) -> ConfigurationSpace:
     contain NA values, and parameters that are NA in all data will not
     appear in the configuration space at all.
     """
+    full_data = pd.concat(data)
+
     param_dict: dict[str,
                      tuple[int, int]
                      | tuple[float, float]
@@ -23,47 +25,28 @@ def auto_configspace(data: dict[int, pd.DataFrame]) -> ConfigurationSpace:
                      | int
                      | float
                      | str] = {}
-    num_dict: dict[str, tuple[int, int] | tuple[float, float]] = {}
-    cat_dict: dict[str, set[int | float | str]] = {}
 
-    for _, full_data in data.items():
-        params_data = full_data.drop(columns=['value'])
-        params_data = params_data.dropna(axis=1, how='all')
-        num_cols = params_data.select_dtypes(include=['number']).columns
-        cat_cols = params_data.select_dtypes(exclude=['number']).columns
+    params_data = full_data.drop(columns=['value'])
+    params_data = params_data.dropna(axis=1, how='all')
+    num_cols = params_data.select_dtypes(include=['number']).columns
+    cat_cols = params_data.select_dtypes(exclude=['number']).columns
 
-        # Min and max of numerical hyperparams
-        for col in num_cols:
-            min_val = params_data[col].min()
-            max_val = params_data[col].max()
-            if col not in num_dict.keys():
-                num_dict[col] = (min_val, max_val)
-            else:
-                prev_min, prev_max = num_dict[col]
-                num_dict[col] = (min(prev_min, min_val),
-                                 max(prev_max, max_val))
-
-        # Unique values of categorical hyperparams
-        for col in cat_cols:
-            unique_values = set(params_data[col].dropna().unique())
-            if col not in cat_dict.keys():
-                cat_dict[col] = unique_values
-            else:
-                cat_dict[col] = set.union(cat_dict[col], unique_values)
-
-    # Find constant parameters, and convert sets to lists
-    for param, range in num_dict.items():
-        if range[0] == range[1]:
-            param_dict[param] = range[0]
+    # Min and max of numerical hyperparams
+    for col in num_cols:
+        min_val = params_data[col].min()
+        max_val = params_data[col].max()
+        if min_val == max_val:
+            param_dict[col] = min_val
         else:
-            param_dict[param] = range
+            param_dict[col] = (min_val, max_val)
 
-    for param, choices in cat_dict.items():
-        choice_list = list(choices)
-        if len(choice_list) == 1:
-            param_dict[param] = choice_list[0]
+    # Unique values of categorical hyperparams
+    for col in cat_cols:
+        unique_values = list(params_data[col].dropna().unique())
+        if len(unique_values) == 1:
+            param_dict[col] = unique_values[0]
         else:
-            param_dict[param] = choice_list
+            param_dict[col] = unique_values
 
     return ConfigurationSpace(space=param_dict)
 
