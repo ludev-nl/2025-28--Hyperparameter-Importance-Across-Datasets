@@ -4,7 +4,28 @@ from os.path import exists
 
 import pandas as pd
 
-from openml import study, evaluations, setups, exceptions
+from openml import flows, study, evaluations, setups, exceptions
+
+
+def fetch_flows() -> pd.DataFrame | None:
+    """Fetch all flows on openml, in a dataframe indexed on flow ID, and
+    with columns for the name and version (which even together are not
+    unique), or None if no flows exist.
+    """
+    f = flows.list_flows(output_format='dataframe')
+    if f is None or f.empty:
+        return None
+    return f.set_index('id')[['name', 'version']]
+
+
+def fetch_suites() -> pd.DataFrame | None:
+    """Fetch all suites on openml, in a dataframe indexed on suite ID, and
+    with columns for the name (called 'alias'), or None if no flows exist.
+    """
+    suites = study.list_suites(output_format='dataframe')
+    if suites is None or suites.empty:
+        return None
+    return suites.set_index('id')[['alias']]
 
 
 def fetch_tasks(suite_id: int) -> list[int] | None:
