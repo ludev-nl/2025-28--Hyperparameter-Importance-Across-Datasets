@@ -19,6 +19,20 @@ max_runs = 50
 
 class OpenMLTests(unittest.TestCase):
 
+    def test_flows(self):
+        flows = omlf.fetch_flows()
+        # Check the columns are correct, and that there are at least as
+        # many as at the time of development
+        self.assertListEqual(list(flows.columns), ['name', 'version'])
+        self.assertGreaterEqual(len(flows), 46546)
+
+    def test_suites(self):
+        suites = omlf.fetch_suites()
+        # Check the columns are correct, and that there are at least as
+        # many as at the time of development
+        self.assertListEqual(list(suites.columns), ['alias'])
+        self.assertGreaterEqual(len(suites), 3)
+
     def test_tasks_pos(self):
         tasks = omlf.fetch_tasks(suite_id)
         self.assertListEqual(tasks, openml100)

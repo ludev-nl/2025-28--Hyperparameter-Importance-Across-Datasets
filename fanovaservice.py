@@ -55,21 +55,22 @@ def filter_data(data: dict[int, pd.DataFrame],
                 cfg_space: ConfigurationSpace) -> dict[int, pd.DataFrame]:
     """Filters data according to the configuration space cfg_space, and
     returns the data that fits. Columns in data not present as parameter
-    in cfg_space are ignored, and NA values are always accepted.
+    in cfg_space are ignored, and NA values are always accepted. If a parameter
+    is omitted from the cfg_space, all values are accepted for that parameter.
     """
     result = {}
 
     for task, task_data in data.items():
-        copy = task_data.copy(deep=True)
-        valid = pd.Series([True for _ in range(len(copy))], index=copy.index)
+        valid = pd.Series([True for _ in range(len(task_data))],
+                          index=task_data.index)
 
         for param_name, param in cfg_space.items():
-            valid_p = copy[param_name].map(lambda x:
-                                           True if pd.isna(x)
-                                           else param.legal_value(x))
-            valid = (valid) & (valid_p)
+            valid_p = task_data[param_name].map(lambda x:
+                                                True if pd.isna(x)
+                                                else param.legal_value(x))
+            valid &= valid_p
 
-        result[task] = copy[valid]
+        result[task] = task_data[valid]
 
     return result
 
@@ -101,6 +102,7 @@ def impute_data(data: dict[int, pd.DataFrame],
             missing |= task_data[param_name].isna().any()
 
         # Constant params become categorical by adding an impute value
+        # TODO: maybe they should remain constant?
         if isinstance(param, Constant):
             if missing:
                 impute_val = 'IMPUTE_HPIAD'
@@ -108,7 +110,7 @@ def impute_data(data: dict[int, pd.DataFrame],
                 while impute_val == param.value:
                     impute_val = '_' + impute_val
                 impute_vals[param_name] = impute_val
-                cfg_dict[param_name] = [param.value, impute_vals[param_name]]
+                cfg_dict[param_name] = [param.value, impute_val]
             else:
                 cfg_dict[param_name] = param.value
 
@@ -121,7 +123,7 @@ def impute_data(data: dict[int, pd.DataFrame],
                     impute_val = '_' + impute_val
                 impute_vals[param_name] = impute_val
                 cfg_dict[param_name] = \
-                    list(param.choices) + [impute_vals[param_name]]
+                    list(param.choices) + [impute_val]
             else:
                 cfg_dict[param_name] = list(param.choices)
 
