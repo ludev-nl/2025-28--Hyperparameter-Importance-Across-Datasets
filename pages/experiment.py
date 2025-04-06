@@ -68,6 +68,24 @@ flow_content = html.Div([
 # def start_progress(n_clicks):
 #     return False 
 
+
+#placeholder code for table
+table_header = [html.Thead(html.Tr([html.Th("Task ID"), html.Th("Original runs"), html.Th("Filtered runs")]))]
+
+row1 = html.Tr([html.Td("3"), html.Td("500"), html.Td("20")])
+row2 = html.Tr([html.Td("6"), html.Td("460"), html.Td("100")])
+row3 = html.Tr([html.Td("11"), html.Td("600"), html.Td("150")])
+
+table_body = [html.Tbody([row1, row2, row3])]
+
+table = dbc.Table(
+    table_header + table_body,
+    bordered=True,
+    hover=True,
+    responsive=True,
+    striped=True,
+    )
+
 config_content = html.Div([
                               html.Br(),
                               dbc.Row([
@@ -96,26 +114,49 @@ config_content = html.Div([
                               html.Br(),
                               dbc.Row([
                                             dbc.Col(
-                                                        html.Div(dcc.Dropdown(["Random Forest", "Transformer","k-Neighbours"],id='categories')),
+                                                        html.Div(
+                                                            dcc.Dropdown(["Random Forest", "Transformer","k-Neighbours"],
+                                                                         ["Random Forest", "Transformer","k-Neighbours"],
+                                                                         id='categories',
+                                                                         multi=True)
+                                                                ),
+                                                        width=6
                                                     ),
                                             dbc.Col(
-                                                        html.Div([
-                                                                     dcc.RangeSlider(0,20,marks=None,id='range')
-                                                                 ]),
+                                                        html.Div("min:"),
+                                                        width=1
                                                     ),
-                                      ])
+                                            dbc.Col(
+                                                        dbc.Input(type="text",id="min_value",value="0.0"),
+                                                        width=2
+                                                    ),
+                                            dbc.Col(
+                                                        html.Div("max:"),
+                                                        width=1
+                                                    ),
+                                            dbc.Col(
+                                                        dbc.Input(type="text",id="max_value",value="0.0",
+                                                                  pattern=r"([+-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+))"),
+                                                        width=2
+                                                    ),
+                                      ]),
+                              html.Br(),
+                              dbc.Row([
+                                            dbc.Col(
+                                                table,
+                                                width = {"size": 6, "offset": 3},
+                                            )
+                                      ]),
                           ])
 
 layout = dbc.Container(
     [
         html.H1("Experiment Setup"),
-        dcc.Markdown("explanation text"),
-        dbc.Button(
-            "Run Fanova",
-            color="primary",
-            id="button",
-            className="mb-3",
-        ),
+        dcc.Markdown('''
+                1. Choose which flows and suites you want to include in the analysis. Click the fetch button to fetch them.
+                2. Filter your configuration space by selecting which hyperparameter configurations should be included. By default, all configurations are included.
+                3. Click the 'Run Fanova' button and wait for the results.
+                '''),
         dbc.Tabs(
             [
                 dbc.Tab(flow_content, label="Flow and Suite Selection", tab_id="flow"),
@@ -123,6 +164,14 @@ layout = dbc.Container(
             ],
             id="tabs",
             active_tab="flow",
+        ),
+        html.Center(
+            dbc.Button(
+                "Run Fanova",
+                color="primary",
+                id="button",
+                className="mb-3",
+            ),
         )
     ]
 )
