@@ -15,34 +15,62 @@ items = [
 
 flow_content = html.Div([
     # html.H1("This is the flow tab", className="mb-4"),
-
-    html.Div(
-        [
-            dbc.DropdownMenu(items, label="Flow Selection", color="warning", className="mb-4"),
-            dbc.DropdownMenu(items, label="Suite Selection", color="info", className="mb-4"),
-        ],
-        style={"display": "flex", "flexDirection": "column", "width": "400px"},
-    ),
-
-    html.Div(
-        [
-            dbc.Button("Fetch", outline = True, size="lg", color = "primary", className="mb-4"), 
-        ]
-    ),
-
-       html.Div(
-        [
-            dcc.Interval(id="progress-interval", n_intervals=0, interval=500, disabled=True),  
-            dbc.Progress(id="progress", value=25, striped=True, animated=True, className="mt-2"),
-            dbc.Button(
-                "Cancel",
-                id="animation-toggle",
-                className="mt-2",
-                n_clicks=0,
-            ),
-        ]
-    ),
-])
+                            html.Br(),
+                            dbc.Row([
+                                        dbc.Col(html.Div("Flow Selection:"))
+                                    ]),
+                            dbc.Row([
+                                        dbc.Col(html.Div(
+                                                    dcc.Dropdown(["Hyperp 1", "hyparam","1352 hyp"],id='num_hyperparameter')
+                                                )),
+                                    ]),
+                            html.Br(),
+                            dbc.Row([
+                                        dbc.Col(html.Div("Suite Selection:"))
+                                    ]),
+                            dbc.Row([
+                                        dbc.Col(html.Div(
+                                                    dcc.Dropdown(["Hyperp 1", "hyparam","1352 hyp"],id='num_hyperparameter')
+                                                )),
+                                    ]), 
+ 
+                            html.Br(),
+                            dbc.Row(html.Center(html.Div(
+                                [
+                                    dbc.Button("Fetch", outline = True, size="lg", color = "primary", className="mb-4"), 
+                                ]
+                            ))),
+        
+                            html.Br(),
+                            dbc.Row([   
+                                        dbc.Col(
+                                                html.Div(
+                                                    [
+                                                        dcc.Interval(id="progress-interval", n_intervals=0, interval=500, disabled=True),  
+                                                        dbc.Progress(id="progress", value=25, striped=True, animated=True, className="mt-2")
+                                                    ]
+                                                            ),
+                                                        width={"size":9, "offset":1},
+                                                        align="center"
+                                                ),
+                                        dbc.Col(
+                                                html.Div(
+                                                    [
+                                                    dbc.Button(
+                                                    "Cancel",
+                                                    id="animation-toggle",
+                                                    className="mt-2",
+                                                    color="danger",
+                                                    outline=True,
+                                                    n_clicks=0),
+                                                    ]
+                                                        ),
+                                                    width={"size":1}
+                                                )
+                                                       
+                                
+                            ]), 
+                        ])
 
 # progress bar will show after callback
 # @app.callback(
