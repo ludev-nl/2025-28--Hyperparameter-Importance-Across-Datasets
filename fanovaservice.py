@@ -3,8 +3,9 @@ import pandas as pd
 
 from fanova import fANOVA
 from ConfigSpace import ConfigurationSpace
-from ConfigSpace import CategoricalHyperparameter
 from ConfigSpace import Constant
+from ConfigSpace import CategoricalHyperparameter
+from ConfigSpace.hyperparameters import NumericalHyperparameter
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
 
@@ -15,42 +16,37 @@ def auto_configspace(data: dict[int, pd.DataFrame]) -> ConfigurationSpace:
     contain NA values, and parameters that are NA in all data will not
     appear in the configuration space at all.
     """
-    param_dict = {}
+    full_data = pd.concat(data)
 
-    for _, full_data in data.items():
-        params_data = full_data.drop(columns=['value'])
-        params_data = params_data.dropna(axis=1, how='all')
-        num_cols = params_data.select_dtypes(include=['number']).columns
-        cat_cols = params_data.select_dtypes(exclude=['number']).columns
+    param_dict: dict[str,
+                     tuple[int, int]
+                     | tuple[float, float]
+                     | list[int | float | str]
+                     | int
+                     | float
+                     | str] = {}
 
-        # Min and max of numerical hyperparams
-        for col in num_cols:
-            min_val = params_data[col].min()
-            max_val = params_data[col].max()
-            if col not in param_dict.keys():
-                param_dict[col] = (min_val, max_val)
-            else:
-                prev_min, prev_max = param_dict[col]
-                param_dict[col] = (min(prev_min, min_val),
-                                   max(prev_max, max_val))
+    params_data = full_data.drop(columns=['value'])
+    params_data = params_data.dropna(axis=1, how='all')
+    num_cols = params_data.select_dtypes(include=['number']).columns
+    cat_cols = params_data.select_dtypes(exclude=['number']).columns
 
-        # Unique values of categorical hyperparams
-        for col in cat_cols:
-            unique_values = set(params_data[col].dropna().unique())
-            if col not in param_dict.keys():
-                param_dict[col] = unique_values
-            else:
-                param_dict[col] = set.union(param_dict[col], unique_values)
+    # Min and max of numerical hyperparams
+    for col in num_cols:
+        min_val = params_data[col].min()
+        max_val = params_data[col].max()
+        if min_val == max_val:
+            param_dict[col] = min_val
+        else:
+            param_dict[col] = (min_val, max_val)
 
-    # Find constant parameters, and convert sets to lists
-    for param, range in param_dict.items():
-        if isinstance(range, tuple) and range[0] == range[1]:
-            param_dict[param] = range[0]
-        elif isinstance(range, set):
-            if len(range) == 1:
-                param_dict[param] = range.pop()
-            else:
-                param_dict[param] = list(range)
+    # Unique values of categorical hyperparams
+    for col in cat_cols:
+        unique_values = list(params_data[col].dropna().unique())
+        if len(unique_values) == 1:
+            param_dict[col] = unique_values[0]
+        else:
+            param_dict[col] = unique_values
 
     return ConfigurationSpace(space=param_dict)
 
@@ -59,10 +55,24 @@ def filter_data(data: dict[int, pd.DataFrame],
                 cfg_space: ConfigurationSpace) -> dict[int, pd.DataFrame]:
     """Filters data according to the configuration space cfg_space, and
     returns the data that fits. Columns in data not present as parameter
-    in cfg_space are ignored, and NA values are always accepted.
+    in cfg_space are ignored, and NA values are always accepted. If a parameter
+    is omitted from the cfg_space, all values are accepted for that parameter.
     """
-    # TODO: unimplemented. might have to round data as in prepare_data
-    return data
+    result = {}
+
+    for task, task_data in data.items():
+        valid = pd.Series([True for _ in range(len(task_data))],
+                          index=task_data.index)
+
+        for param_name, param in cfg_space.items():
+            valid_p = task_data[param_name].map(lambda x:
+                                                True if pd.isna(x)
+                                                else param.legal_value(x))
+            valid &= valid_p
+
+        result[task] = task_data[valid]
+
+    return result
 
 
 def impute_data(data: dict[int, pd.DataFrame],
@@ -70,19 +80,69 @@ def impute_data(data: dict[int, pd.DataFrame],
         -> tuple[dict[int, pd.DataFrame], ConfigurationSpace]:
     """Imputes the data with a value out of range. The range is specified
     by cfg_space, and we return the imputed data, as well as an extended
-    configuration space that includes the imputed values.
+    configuration space that includes the imputed values. Columns containing
+    only missing values are removed.
     """
-    # TODO: impute using some value out of range, instead of default
-    # This should return a new configspace, that also includes the
-    # imputed values.
+    # The values to impute with
+    impute_vals: dict[str, int | float | str] = {}
+    # New configspace including imputed values
+    cfg_dict: dict[str,
+                   tuple[int, int]
+                   | tuple[float, float]
+                   | list[object]
+                   | set[object]
+                   | int
+                   | float
+                   | str] = {}
+
+    for param_name, param in cfg_space.items():
+        # If a parameter has no missing values, skip it
+        missing = False
+        for task_data in data.values():
+            missing |= task_data[param_name].isna().any()
+
+        # Constant params become categorical by adding an impute value
+        # TODO: maybe they should remain constant?
+        if isinstance(param, Constant):
+            if missing:
+                impute_val = 'IMPUTE_HPIAD'
+                # Ensure impute value was not yet present
+                while impute_val == param.value:
+                    impute_val = '_' + impute_val
+                impute_vals[param_name] = impute_val
+                cfg_dict[param_name] = [param.value, impute_val]
+            else:
+                cfg_dict[param_name] = param.value
+
+        # Categorical params get an extra impute value
+        elif isinstance(param, CategoricalHyperparameter):
+            if missing:
+                impute_val = 'IMPUTE_HPIAD'
+                # Ensure impute value was not yet present
+                while impute_val in param.choices:
+                    impute_val = '_' + impute_val
+                impute_vals[param_name] = impute_val
+                cfg_dict[param_name] = \
+                    list(param.choices) + [impute_val]
+            else:
+                cfg_dict[param_name] = list(param.choices)
+
+        # Numerical params are imputed with one below their lower bound
+        elif isinstance(param, NumericalHyperparameter):
+            if missing:
+                impute_vals[param_name] = param.lower - 1
+                cfg_dict[param_name] = (param.lower - 1, param.upper)
+            else:
+                cfg_dict[param_name] = (param.lower, param.upper)
+
+    # The resulting data
     imputed_data = {}
-    default = dict(cfg_space.get_default_configuration())
 
     for task, task_data in data.items():
         imputed_data[task] = \
-            task_data.dropna(axis=1, how='all').fillna(default)
+            task_data[['value'] + list(cfg_space.keys())].fillna(impute_vals)
 
-    return imputed_data, cfg_space
+    return imputed_data, ConfigurationSpace(cfg_dict)
 
 
 def prepare_data(data: dict[int, pd.DataFrame],
@@ -97,8 +157,7 @@ def prepare_data(data: dict[int, pd.DataFrame],
     for task, task_data in data.items():
         prep = task_data.apply(np.round, decimals=ROUND_PLACES)
 
-        for param_name in cfg_space:
-            param = cfg_space[param_name]
+        for param_name, param in cfg_space.items():
             if isinstance(param, CategoricalHyperparameter):
                 prep[param_name] = \
                     prep[param_name].map((lambda option:
@@ -106,14 +165,14 @@ def prepare_data(data: dict[int, pd.DataFrame],
             elif isinstance(param, Constant):
                 prep[param_name] = 0
 
-        res[task] = prep
+        res[task] = prep.astype(np.float64)
 
     return res
 
 
 def run_fanova(task_data: pd.DataFrame,
                cfg_space: ConfigurationSpace,
-               min_runs: int = 0) -> dict[str, float]:
+               min_runs: int = 0) -> dict[str, float] | None:
     """Run fANOVA on data for one task, which contains imputed and prepared
     setups and evals that fit in the configuration space cfg_space. If the
     task does not have at least min_runs runs, return None. Returns a dict
@@ -130,13 +189,13 @@ def run_fanova(task_data: pd.DataFrame,
     result = {}
     index = -1
 
-    for param in cfg_space:
+    for param_name, param in cfg_space.items():
         index += 1
-        if isinstance(cfg_space[param], Constant):
+        if isinstance(param, Constant):
             continue
 
         score = fnv.quantify_importance((index,))[(index,)]
-        result[param] = score['individual importance']
+        result[param_name] = score['individual importance']
 
     # TODO: pairwise marginals
 
@@ -145,7 +204,7 @@ def run_fanova(task_data: pd.DataFrame,
 
 def export_csv(flow_id: int,
                suite_id: int,
-               results: pd.DataFrame) -> None:
+               results: pd.DataFrame) -> None:  # pragma: no cover
     # TODO: this is just for current testing. Eventually this
     # will be sent to Dash components without creating a file.
     # The first column is index, so dont plot that!

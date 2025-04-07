@@ -4,10 +4,31 @@ from os.path import exists
 
 import pandas as pd
 
-from openml import study, evaluations, setups, exceptions
+from openml import flows, study, evaluations, setups, exceptions
 
 
-def fetch_tasks(suite_id: int) -> list[int]:
+def fetch_flows() -> pd.DataFrame | None:
+    """Fetch all flows on openml, in a dataframe indexed on flow ID, and
+    with columns for the name and version (which even together are not
+    unique), or None if no flows exist.
+    """
+    f = flows.list_flows(output_format='dataframe')
+    if f is None or f.empty:
+        return None
+    return f.set_index('id')[['name', 'version']]
+
+
+def fetch_suites() -> pd.DataFrame | None:
+    """Fetch all suites on openml, in a dataframe indexed on suite ID, and
+    with columns for the name (called 'alias'), or None if no flows exist.
+    """
+    suites = study.list_suites(output_format='dataframe')
+    if suites is None or suites.empty:
+        return None
+    return suites.set_index('id')[['alias']]
+
+
+def fetch_tasks(suite_id: int) -> list[int] | None:
     """Fetch the list of task IDs in the benchmark suite specified
     by suite_id. Returns None if the suite does not exist.
     """
@@ -25,7 +46,7 @@ def fetch_tasks(suite_id: int) -> list[int]:
 
 def fetch_runs(flow_id: int,
                task_id: int,
-               max_runs: int = None) -> pd.DataFrame:
+               max_runs: int | None = None) -> pd.DataFrame | None:
     """Fetch the hyperparameter setups and resulting evaluations
     for the algorithm with flow_id in th task with task_id, in a
     dataframe with index run_id and value and parameters in all
@@ -51,7 +72,7 @@ def fetch_runs(flow_id: int,
     batch_size = 250
     while offset < tot:
         batch = setups.list_setups(setup=ids[offset:(offset+batch_size)],
-                                   output_format='dataframe').parameters
+                                   output_format='dataframe')['parameters']
         batches.append(batch)
         offset += batch_size
 
@@ -81,7 +102,7 @@ def coerce_types(data: pd.DataFrame) -> pd.DataFrame:
 
 def export_csv(flow_id: int,
                suite_id: int,
-               data: dict[int, pd.DataFrame]) -> None:
+               data: dict[int, pd.DataFrame]) -> None:  # pragma: no cover
     # TODO: this is just for current testing. Eventually this
     # will be sent to Dash components without creating a file.
     folder_name = f'./openml_f{flow_id}_s{suite_id}/'

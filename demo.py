@@ -49,10 +49,15 @@ section_start = section_end
 
 # All these steps have }to be executed in this order, and
 # only the filtering might happen multiple times
-cfg_space = fnvs.auto_configspace(data)
+auto_cfg_space = fnvs.auto_configspace(data)
 # Have the user edit the cfg_space as often as they want,
-# and filter every time with new cfg_space
-filtered_data = fnvs.filter_data(data, cfg_space)
+# and filter every time with new cfg_space. The filter
+# space does not have to contain every parameter, if one
+# is missing, all values are accepted for it.
+filter_space = auto_cfg_space  # Should let the user edit it instead
+filtered_data = fnvs.filter_data(data, filter_space)
+# Filtering might make parameters constant etc, so we recreate the space
+cfg_space = fnvs.auto_configspace(filtered_data)
 
 section_end = time.time()
 print(f'ConfigSpace determined in {section_end-section_start} sec')
@@ -81,7 +86,7 @@ fnvs.export_csv(flow_id, suite_id, results)
 
 section_end = time.time()
 print(f'fANOVA ran in {section_end-section_start} sec')
-# -------------------------- Visualiser -------------------------
 
+# -------------------------- Visualiser -------------------------
 vis.violinplot(results, show=True)
 vis.crit_diff_diagram(results, show=True)
