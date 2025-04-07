@@ -6,6 +6,7 @@ import pandas as pd
 
 app = dash.Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
+
 SIDEBAR_STYLE = {
     "position": "fixed",
     "top": 0,
@@ -43,8 +44,30 @@ sidebar = html.Div(
 
 content = html.Div(dash.page_container, style=CONTENT_STYLE)
 
-app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
+app.layout = html.Div([
+    #store elements that can be used to store the data over pages
+    #storage_type is used to specify how long the data is stored for. 
+    #session means that data is cleared after browser is closed
+
+    #datatype is a dictionary
+    dcc.Store(id="raw_data_store", storage_type="session", data={}),
+    dcc.Store(id="filtered_data", storage_type= "session", data={}),
+    #datatype is config space element, but that is initialised with None type
+    dcc.Store(id="raw_configspace",storage_type= "session", data=None),
+    dcc.Store(id="filtered_configspace",storage_type= "session", data=None),
+    dcc.Location(id="url"),
+    sidebar,
+    content
+    
+    
+    ])
+
+
+
+
+
 
 if __name__ == "__main__":
     app.run(port=8888)
+
 
