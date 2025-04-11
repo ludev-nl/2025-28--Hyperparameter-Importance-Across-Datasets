@@ -2,9 +2,22 @@ import dash
 from dash import Input, Output, State, dcc, html
 import dash_bootstrap_components as dbc
 
+# TODO: change paths/folder structure
+# import sys
+# sys.path.append('../')
+
+import sys
+import os
+
+# Add the utils directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'openmlfetcher')))
+
+import openmlfetcher as fetcher
+
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 dash.register_page(__name__, path='/experiment')
+
 
 # TODO: Exact items will be changed later
 items = [
@@ -21,7 +34,7 @@ flow_content = html.Div([
                                     ]),
                             dbc.Row([
                                         dbc.Col(html.Div(
-                                                    dcc.Dropdown(["Hyperp 1", "hyparam","1352 hyp"],id='num_hyperparameter')
+                                                    dcc.Dropdown(['too many for dropdown'], id='flow_dropdown')
                                                 )),
                                     ]),
                             html.Br(),
@@ -30,23 +43,23 @@ flow_content = html.Div([
                                     ]),
                             dbc.Row([
                                         dbc.Col(html.Div(
-                                                    dcc.Dropdown(["Hyperp 1", "hyparam","1352 hyp"],id='num_hyperparameter')
+                                                    dcc.Dropdown(list(fetcher.fetch_suites().alias), id='suite_dropdown')
                                                 )),
-                                    ]), 
- 
+                                    ]),
+
                             html.Br(),
                             dbc.Row(html.Center(html.Div(
                                 [
-                                    dbc.Button("Fetch", outline = True, size="lg", color = "primary", className="mb-4"), 
+                                    dbc.Button("Fetch", outline = True, size="lg", color = "primary", className="mb-4"),
                                 ]
                             ))),
-        
+
                             html.Br(),
-                            dbc.Row([   
+                            dbc.Row([
                                         dbc.Col(
                                                 html.Div(
                                                     [
-                                                        dcc.Interval(id="progress-interval", n_intervals=0, interval=500, disabled=True),  
+                                                        dcc.Interval(id="progress-interval", n_intervals=0, interval=500, disabled=True),
                                                         dbc.Progress(id="progress", value=25, striped=True, animated=True, className="mt-2")
                                                     ]
                                                             ),
@@ -67,9 +80,9 @@ flow_content = html.Div([
                                                         ),
                                                     width={"size":1}
                                                 )
-                                                       
-                                
-                            ]), 
+
+
+                            ]),
                         ])
 
 # progress bar will show after callback
@@ -82,20 +95,19 @@ flow_content = html.Div([
 # )
 # def update_progress(n_intervals, n_clicks, current_value):
 #     if n_clicks > 0:
-#         return 0, True  
+#         return 0, True
 
 #     new_value = min(current_value + 10, 100)
-#     return new_value, new_value >= 100  
+#     return new_value, new_value >= 100
 
 
 # @app.callback(
 #     Output("progress-interval", "disabled"),
 #     Input("Fetch-button", "n_clicks"),
-#     prevent_initial_call=True  
+#     prevent_initial_call=True
 # )
 # def start_progress(n_clicks):
-#     return False 
-
+#     return False
 
 #placeholder code for table
 table_header = [html.Thead(html.Tr([html.Th("Task ID"), html.Th("Original runs"), html.Th("Filtered runs")]))]

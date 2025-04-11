@@ -46,7 +46,7 @@ content = html.Div(dash.page_container, style=CONTENT_STYLE)
 
 app.layout = html.Div([
     #store elements that can be used to store the data over pages
-    #storage_type is used to specify how long the data is stored for. 
+    #storage_type is used to specify how long the data is stored for.
     #session means that data is cleared after browser is closed
 
     #datatype is a dictionary
@@ -58,8 +58,8 @@ app.layout = html.Div([
     dcc.Location(id="url"),
     sidebar,
     content
-    
-    
+
+
     ])
 
 
