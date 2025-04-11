@@ -80,10 +80,19 @@ class FanovaTests(unittest.TestCase):
     def test_impute(self):
         imputed_data, new_space = fnvs.impute_data(self.data, cfg_space)
 
-        # Assert that there are no missing values anymore
-        for data in imputed_data.values():
+        # Check for every dataframe...
+        for task, data in imputed_data.items():
+            # Ignore hyperparameters without any values
+            original = self.data[task].dropna(axis=1, how='all')
+            # That it is a dataframe...
             self.assertIsInstance(data, pd.DataFrame)
+            # With the same columns...
+            self.assertSetEqual(set(data.columns), set(original.columns))
+            # And the same index...
+            self.assertListEqual(list(data.index), list(original.index))
+            # But no missing values
             self.assertFalse(data.isna().any().any())
+
             # Assert that the new data fits in the correct config space
             for param_name, param in imp_space.items():
                 values = np.array(data[param_name])
