@@ -60,17 +60,22 @@ def filter_data(data: dict[int, pd.DataFrame],
     """
     result = {}
 
-    for task, task_data in data.items():
-        valid = pd.Series([True for _ in range(len(task_data))],
-                          index=task_data.index)
+    for task, df in data.items():
+        valid = {}
 
         for param_name, param in cfg_space.items():
-            valid_p = task_data[param_name].map(lambda x:
-                                                True if pd.isna(x)
-                                                else param.legal_value(x))
-            valid &= valid_p
+            if isinstance(param, Constant):
+                valid[param_name] = df[param_name].isna() \
+                                    | (df[param_name] == param.value)
+            elif isinstance(param, CategoricalHyperparameter):
+                valid[param_name] = df[param_name].isna() \
+                                    | df[param_name].isin(param.choices)
+            elif isinstance(param, NumericalHyperparameter):
+                valid[param_name] = df[param_name].isna() \
+                                    | ((df[param_name] >= param.lower)
+                                       & (df[param_name] <= param.upper))
 
-        result[task] = task_data[valid]
+        result[task] = df[pd.DataFrame.from_dict(valid).all(axis=1)]
 
     return result
 
