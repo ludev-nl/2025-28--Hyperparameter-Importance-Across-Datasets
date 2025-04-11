@@ -60,22 +60,22 @@ def filter_data(data: dict[int, pd.DataFrame],
     """
     result = {}
 
-    for task, task_data in data.items():
+    for task, df in data.items():
         valid = {}
 
         for param_name, param in cfg_space.items():
             if isinstance(param, Constant):
-                valid[param_name] = task_data[param_name].isna() \
-                                    | (task_data[param_name] == param.value)
+                valid[param_name] = df[param_name].isna() \
+                                    | (df[param_name] == param.value)
             elif isinstance(param, CategoricalHyperparameter):
-                valid[param_name] = task_data[param_name].isna() \
-                                    | task_data[param_name].isin(param.choices)
+                valid[param_name] = df[param_name].isna() \
+                                    | df[param_name].isin(param.choices)
             elif isinstance(param, NumericalHyperparameter):
-                valid[param_name] = task_data[param_name].isna() \
-                                    | ((task_data[param_name] >= param.lower)
-                                       & (task_data[param_name] <= param.upper))
+                valid[param_name] = df[param_name].isna() \
+                                    | ((df[param_name] >= param.lower)
+                                       & (df[param_name] <= param.upper))
 
-        result[task] = task_data[pd.DataFrame.from_dict(valid).all(axis=1)]
+        result[task] = df[pd.DataFrame.from_dict(valid).all(axis=1)]
 
     return result
 
