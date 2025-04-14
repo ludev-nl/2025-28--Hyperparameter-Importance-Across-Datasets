@@ -2,10 +2,6 @@ import dash
 from dash import Input, Output, State, dcc, html
 import dash_bootstrap_components as dbc
 
-# TODO: change paths/folder structure
-# import sys
-# sys.path.append('../')
-
 import sys
 import os
 
