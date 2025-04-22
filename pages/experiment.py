@@ -1,5 +1,6 @@
 import dash
 from dash import Input, Output, State, dcc, html, callback
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter, Constant
 
