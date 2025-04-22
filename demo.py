@@ -17,6 +17,7 @@ max_runs = None
 
 # --------------------------- OpenML -----------------------------
 print('Fetching OpenML...')
+startAll = time.time()
 section_start = time.time()
 
 # The task loop is not inside the functions,
@@ -90,3 +91,6 @@ print(f'fANOVA ran in {section_end-section_start} sec')
 # -------------------------- Visualiser -------------------------
 vis.violinplot(results, show=True)
 vis.crit_diff_diagram(results, show=True)
+
+endall = time.time()
+print(endall - startAll)

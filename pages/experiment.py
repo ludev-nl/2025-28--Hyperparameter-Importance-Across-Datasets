@@ -1,6 +1,7 @@
 import dash
-from dash import Input, Output, State, dcc, html
+from dash import Input, Output, State, dcc, html, callback
 import dash_bootstrap_components as dbc
+from dash.exceptions import PreventUpdate
 
 import sys
 import os
@@ -11,7 +12,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'o
 import openmlfetcher as fetcher
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-
 dash.register_page(__name__, path='/experiment')
 
 
@@ -22,6 +22,27 @@ items = [
     dbc.DropdownMenuItem("Item 3"),
 ]
 
+
+#converts the fetched data into the right format for the dropdown menu
+#returns a list of dictionaries
+
+def DFtoDropdownDict():
+
+    df = fetcher.fetch_flows()
+    optionslist = []
+
+    for index, row in df.iterrows():
+        label = str(index) +'.' +str(row['name'])+ '.'+ str(row['version'])
+        dic = dict(label=label, value=label)
+        optionslist.append(dic)
+
+    return(optionslist)
+
+#list of options for the flow selection dropdown bar
+options = DFtoDropdownDict()
+
+
+
 flow_content = html.Div([
     # html.H1("This is the flow tab", className="mb-4"),
                             html.Br(),
@@ -30,7 +51,7 @@ flow_content = html.Div([
                                     ]),
                             dbc.Row([
                                         dbc.Col(html.Div(
-                                                    dcc.Dropdown(['too many for dropdown'], id='flow_dropdown')
+                                                    dcc.Dropdown(id='Flow-input',multi=True)
                                                 )),
                                     ]),
                             html.Br(),
@@ -81,29 +102,54 @@ flow_content = html.Div([
                             ]),
                         ])
 
+
+# Callback for the flow selection dropdown menu
+@callback(
+    Output("Flow-input", "options"),
+    Input("Flow-input", "search_value"),
+    State("Flow-input", "value")
+)
+def update_multi_options(search_value, value):
+
+    #prevents the program from searching the 100k entries from the start.
+    #Browser crashes if the search is done with less than 4 characters
+    #minimum lenght is added to make sure the program shows previously selected items
+    #rather than an empty seachbar
+
+    if len(str(search_value)) < 5 and  len(str(search_value)) > 0:
+        return[]
+
+    if not search_value:
+        raise PreventUpdate
+
+    return [
+        o for o in options if search_value in o["label"] or o["value"] in (value or [])
+    ]
+
+
 # progress bar will show after callback
-# @app.callback(
-#     Output("progress", "value"),
-#     Output("progress-interval", "disabled"),
-#     Input("progress-interval", "n_intervals"),
-#     Input("animation-toggle", "n_clicks"),
-#     State("progress", "value"),
-# )
-# def update_progress(n_intervals, n_clicks, current_value):
-#     if n_clicks > 0:
-#         return 0, True
+@app.callback(
+    Output("progress", "value"),
+    Output("progress-interval", "disabled"),
+    Input("progress-interval", "n_intervals"),
+    Input("animation-toggle", "n_clicks"),
+    State("progress", "value"),
+)
+def update_progress(n_intervals, n_clicks, current_value):
+    if n_clicks > 0:
+        return 0, True
 
-#     new_value = min(current_value + 10, 100)
-#     return new_value, new_value >= 100
+    new_value = min(current_value + 10, 100)
+    return new_value, new_value >= 100
 
 
-# @app.callback(
-#     Output("progress-interval", "disabled"),
-#     Input("Fetch-button", "n_clicks"),
-#     prevent_initial_call=True
-# )
-# def start_progress(n_clicks):
-#     return False
+@app.callback(
+    Output("progress-interval", "disabled"),
+    Input("Fetch-button", "n_clicks"),
+    prevent_initial_call=True
+)
+def start_progress(n_clicks):
+    return False
 
 #placeholder code for table
 table_header = [html.Thead(html.Tr([html.Th("Task ID"), html.Th("Original runs"), html.Th("Filtered runs")]))]
