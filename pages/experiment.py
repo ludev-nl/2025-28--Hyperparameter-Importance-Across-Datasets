@@ -1,7 +1,11 @@
 import dash
 from dash import Input, Output, State, dcc, html, callback
 import dash_bootstrap_components as dbc
-from dash.exceptions import PreventUpdate
+from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter, Constant
+
+# TODO: change paths/folder structure
+# import sys
+# sys.path.append('../')
 
 import sys
 import os
@@ -168,6 +172,10 @@ table = dbc.Table(
     striped=True,
     )
 
+#placeholder code for configspace
+cfg_space = ConfigurationSpace.from_json("example_cfgspace.json")
+hyperparameters = list(cfg_space.keys())
+
 config_content = html.Div([
                               html.Br(),
                               dbc.Row([
@@ -182,46 +190,12 @@ config_content = html.Div([
                               dbc.Row(html.Center(html.Div("Choose hyperparameter configuration space:"))),
                               html.Br(),
                               dbc.Row([
-                                            dbc.Col(html.Div("Categorical:")),
-                                            dbc.Col(html.Div("Numerical:"))
-                                      ]),
-                              dbc.Row([
                                             dbc.Col(html.Div(
-                                                        dcc.Dropdown(["Hyperp 1", "hyparam","1352 hyp"],id='num_hyperparameter')
-                                                    )),
-                                            dbc.Col(html.Div(
-                                                        dcc.Dropdown(["Hyperp 1", "hyparam","1352 hyp"],id='cat_hyperparameter')
-                                                    ))
+                                                        dcc.Dropdown(hyperparameters,id='hyperparameter')
+                                                    ),width={'size':6,'offset':3}),
                                       ]),
                               html.Br(),
-                              dbc.Row([
-                                            dbc.Col(
-                                                        html.Div(
-                                                            dcc.Dropdown(["Random Forest", "Transformer","k-Neighbours"],
-                                                                         ["Random Forest", "Transformer","k-Neighbours"],
-                                                                         id='categories',
-                                                                         multi=True)
-                                                                ),
-                                                        width=6
-                                                    ),
-                                            dbc.Col(
-                                                        html.Div("min:"),
-                                                        width=1
-                                                    ),
-                                            dbc.Col(
-                                                        dbc.Input(type="text",id="min_value",value="0.0"),
-                                                        width=2
-                                                    ),
-                                            dbc.Col(
-                                                        html.Div("max:"),
-                                                        width=1
-                                                    ),
-                                            dbc.Col(
-                                                        dbc.Input(type="text",id="max_value",value="0.0",
-                                                                  pattern=r"([+-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+))"),
-                                                        width=2
-                                                    ),
-                                      ]),
+                              dbc.Row(id='range'),
                               html.Br(),
                               dbc.Row([
                                             dbc.Col(
@@ -230,6 +204,66 @@ config_content = html.Div([
                                             )
                                       ]),
                           ])
+
+@callback(
+    Output(component_id='range', component_property='children'),
+    Input(component_id='hyperparameter', component_property='value'),
+    prevent_initial_call=True
+)
+def show_adequate_range(hyperparameter):
+    hyperparameter_value = cfg_space[hyperparameter]
+    if isinstance(hyperparameter_value, UniformFloatHyperparameter):
+        return(
+        dbc.Col(width=3),
+        dbc.Col(
+                    html.Div("min:"),
+                    width=1
+                ),
+        dbc.Col(
+                    dbc.Input(type="text",id="min_float_value",value=str(hyperparameter_value.lower)),
+                    width=2
+                ),
+        dbc.Col(
+                    html.Div("max:"),
+                    width=1
+                ),
+        dbc.Col(
+                    dbc.Input(type="text",id="max_float_value",value=str(hyperparameter_value.upper),
+                              pattern=r"([+-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+))"),
+                    width=2
+                ),
+        )
+    elif isinstance(hyperparameter_value, UniformIntegerHyperparameter):
+        return(
+        dbc.Col(width=3),
+        dbc.Col(
+                    html.Div("min:"),
+                    width=1
+                ),
+        dbc.Col(
+                    dbc.Input(type="number",id="min_int_value",value=hyperparameter_value.lower),
+                    width=2
+                ),
+        dbc.Col(
+                    html.Div("max:"),
+                    width=1
+                ),
+        dbc.Col(
+                    dbc.Input(type="number",id="max_int_value",value=hyperparameter_value.upper),
+                    width=2
+                ),
+        )
+    elif isinstance(hyperparameter_value, CategoricalHyperparameter):
+        return(
+        dbc.Col(width=3),
+        dbc.Col(
+                    html.Div(dcc.Dropdown(hyperparameter_value.choices,hyperparameter_value.choices,multi=True)),
+                    width=6
+                ),
+        )
+    else:
+        return None
+
 
 layout = dbc.Container(
     [
