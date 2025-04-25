@@ -32,11 +32,11 @@ items = [
 options_df = fetcher.fetch_flows()
 #convert the fetched data into the right format for the dropdown menu
 #returns a list of dictionaries
-def df_to_dict_list(df):
-    return [dict(label=str(id) + '.' +row['full_name'], value = id)
+def df_to_dict_list(df, col):
+    return [dict(label=str(id) + '.' + row[col], value = id)
             for id, row in df.iterrows()]
 
-options = df_to_dict_list(options_df)
+options = df_to_dict_list(options_df, 'full_name')
 
 
 
@@ -57,14 +57,14 @@ flow_content = html.Div([
                                     ]),
                             dbc.Row([
                                         dbc.Col(html.Div(
-                                                    dcc.Dropdown(list(fetcher.fetch_suites().alias), id='suite_dropdown')
+                                                    dcc.Dropdown(df_to_dict_list(fetcher.fetch_suites(), 'alias'), id='suite_dropdown')
                                                 )),
                                     ]),
 
                             html.Br(),
                             dbc.Row(html.Center(html.Div(
                                 [
-                                    dbc.Button("Fetch", outline = True, size="lg", color = "primary", className="mb-4"),
+                                    dbc.Button("Fetch", id= "Fetch", outline = True, size="lg", color = "primary", className="mb-4"),
                                 ]
                             ))),
 
@@ -139,12 +139,25 @@ def update_progress(n_intervals, n_clicks, current_value):
     return new_value, new_value >= 100
 
 
-@app.callback(
+@callback(
     Output("progress-interval", "disabled"),
-    Input("Fetch-button", "n_clicks"),
+    Input("Fetch", "n_clicks"),
+    State("Flow-input", "value"),
+    State("suite_dropdown", "value"),
     prevent_initial_call=True
 )
-def start_progress(n_clicks):
+#TODO: max_runs have to be deleted 
+def start_progress(n_clicks, flow_id, suite_id): 
+    tasks = fetcher.fetch_tasks(suite_id)
+    data = {}
+    print("voor fetch")
+    #TODO: eventually not just first 10
+    for task in tasks[:10]:
+        task_data = fetcher.fetch_runs(flow_id, task, max_runs=50)
+        if task_data is None:
+            continue
+        data[task] = fetcher.coerce_types(task_data)
+    print(data)  
     return False
 
 #placeholder code for table
