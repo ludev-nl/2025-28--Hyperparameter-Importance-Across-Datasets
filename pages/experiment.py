@@ -32,8 +32,11 @@ items = [
 options_df = fetcher.fetch_flows()
 #convert the fetched data into the right format for the dropdown menu
 #returns a list of dictionaries
-options = [dict(label=str(id) + '.' +row['full_name'], value = id)
-           for id, row in options_df.iterrows()]
+def df_to_dict_list(df):
+    return [dict(label=str(id) + '.' +row['full_name'], value = id)
+            for id, row in df.iterrows()]
+
+options = df_to_dict_list(options_df)
 
 
 
@@ -100,31 +103,24 @@ flow_content = html.Div([
 # Callback for the flow selection dropdown menu
 @callback(
     Output("Flow-input", "options"),
-    Input("Flow-input", "search_value"),
-    State("Flow-input", "value")
+    Input("Flow-input", "search_value")
 )
-def update_multi_options(search_value, value):
+def update_multi_options(search_value):
 
     #prevents the program from searching the 100k entries from the start.
     #Browser crashes if the search is done with less than 4 characters
     #minimum lenght is added to make sure the program shows previously selected items
     #rather than an empty seachbar
 
-    if not search_value or len(search_value) < 0:
+    if not search_value:
         raise PreventUpdate
 
-    i = 0
-    j = 0
-    lst = []
-    max_items = 100
+    if len(search_value) < 3:
+        return []
 
-    while i < len(options) and j < max_items:
-        if search_value in options[i]['label']:
-            lst.append(options[i])
-            j += 1
-        i += 1
+    lst = [o for o in options if search_value in o['label']]
 
-    return lst
+    return lst[:50]
 
 
 # progress bar will show after callback
