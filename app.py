@@ -1,10 +1,17 @@
 import dash
-from dash import Input, Output, dcc, html
+from dash import Input, Output, dcc, html, DiskcacheManager
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 import pandas as pd
+import os 
+import diskcache
+  # Diskcache for non-production apps when developing locally
 
-app = dash.Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
+cache = diskcache.Cache("./cache")
+background_callback_manager = DiskcacheManager(cache)
+
+
+app = dash.Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],background_callback_manager=background_callback_manager)
 
 
 SIDEBAR_STYLE = {

@@ -15,6 +15,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'openmlfetcher')))
 
 import openmlfetcher as fetcher
+import fanovaservice as fnvs
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 dash.register_page(__name__, path='/experiment')
@@ -73,8 +74,7 @@ flow_content = html.Div([
                                         dbc.Col(
                                                 html.Div(
                                                     [
-                                                        dcc.Interval(id="progress-interval", n_intervals=0, interval=500, disabled=True),
-                                                        dbc.Progress(id="progress", value=25, striped=True, animated=True, className="mt-2")
+                                                        dbc.Progress(id="progress", value=0, striped=True, animated=True, className="mt-2")
                                                     ]
                                                             ),
                                                         width={"size":9, "offset":1},
@@ -144,20 +144,28 @@ def update_progress(n_intervals, n_clicks, current_value):
     Input("Fetch", "n_clicks"),
     State("Flow-input", "value"),
     State("suite_dropdown", "value"),
-    prevent_initial_call=True
+    prevent_initial_call=True,
+    background=True,
+    running=[
+        (Output("Fetch", "disabled"), True, False),
+    ],
+    progress=[Output("progress", "value"), Output("progress", "max")]
+
 )
 #TODO: max_runs have to be deleted 
-def start_progress(n_clicks, flow_id, suite_id): 
+def start_progress(set_progress, n_clicks, flow_id, suite_id): 
     tasks = fetcher.fetch_tasks(suite_id)
+    set_progress(('0', str(len(tasks))))
     data = {}
-    print("voor fetch")
     #TODO: eventually not just first 10
-    for task in tasks[:10]:
+    i = 0
+    for task in tasks:
         task_data = fetcher.fetch_runs(flow_id, task, max_runs=50)
+        set_progress((str(i), str(len(tasks))))
+        i+=1 
         if task_data is None:
             continue
         data[task] = fetcher.coerce_types(task_data)
-    print(data)  
     return False
 
 #placeholder code for table
