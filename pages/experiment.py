@@ -56,7 +56,7 @@ flow_content = html.Div([
                                     ]),
                             dbc.Row([
                                         dbc.Col(html.Div(
-                                                    dcc.Dropdown(id='Flow-input',multi=True)
+                                                    dcc.Dropdown(id='Flow-input')
                                                 )),
                                     ]),
                             html.Br(),
@@ -121,15 +121,17 @@ def update_multi_options(search_value, value):
     #minimum lenght is added to make sure the program shows previously selected items
     #rather than an empty seachbar
 
-    if len(str(search_value)) < 5 and  len(str(search_value)) > 0:
+    if len(str(search_value)) < 3 and len(str(search_value)) > 0:
         return[]
 
     if not search_value:
         raise PreventUpdate
 
-    return [
-        o for o in options if search_value in o["label"] or o["value"] in (value or [])
-    ]
+    lst = [o for o in options if search_value in o["label"] or o["value"] in (value or [])]
+    if(len(lst) > 50):
+        return lst[:50]
+
+    return lst
 
 
 # progress bar will show after callback
