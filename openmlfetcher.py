@@ -15,7 +15,7 @@ def fetch_flows() -> pd.DataFrame | None:
     f = flows.list_flows(output_format='dataframe')
     if f is None or f.empty:
         return None
-    return f.set_index('id')[['name', 'version']]
+    return f.set_index('id')[['full_name']]
 
 def fetch_suites() -> pd.DataFrame | None:
     """Fetch all suites on openml, in a dataframe indexed on suite ID, and
