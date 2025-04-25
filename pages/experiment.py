@@ -28,23 +28,12 @@ items = [
 ]
 
 
-#converts the fetched data into the right format for the dropdown menu
-#returns a list of dictionaries
-
-def DFtoDropdownDict():
-
-    df = fetcher.fetch_flows()
-    optionslist = []
-
-    for index, row in df.iterrows():
-        label = str(index) +'.' +str(row['name'])+ '.'+ str(row['version'])
-        dic = dict(label=label, value=label)
-        optionslist.append(dic)
-
-    return(optionslist)
-
 #list of options for the flow selection dropdown bar
-options = DFtoDropdownDict()
+options_df = fetcher.fetch_flows()
+#convert the fetched data into the right format for the dropdown menu
+#returns a list of dictionaries
+options = [dict(label=str(id) + '.' +row['full_name'], value = id)
+           for id, row in options_df.iterrows()]
 
 
 
@@ -121,15 +110,19 @@ def update_multi_options(search_value, value):
     #minimum lenght is added to make sure the program shows previously selected items
     #rather than an empty seachbar
 
-    if len(str(search_value)) < 3 and len(str(search_value)) > 0:
-        return[]
-
-    if not search_value:
+    if not search_value or len(search_value) < 0:
         raise PreventUpdate
 
-    lst = [o for o in options if search_value in o["label"] or o["value"] in (value or [])]
-    if(len(lst) > 50):
-        return lst[:50]
+    i = 0
+    j = 0
+    lst = []
+    max_items = 100
+
+    while i < len(options) and j < max_items:
+        if search_value in options[i]['label']:
+            lst.append(options[i])
+            j += 1
+        i += 1
 
     return lst
 
