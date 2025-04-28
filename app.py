@@ -41,7 +41,6 @@ sidebar = html.Div(
                 dbc.NavLink("Home", href="/", active="exact"),
                 dbc.NavLink("Experiment Management", href="/experiment", active="exact"),
                 dbc.NavLink("Results Display", href="/results_display", active="exact"),
-                dbc.NavLink("Results Loading", href="/results_loading", active="exact"),
             ],
             vertical=True,
             pills=True,
