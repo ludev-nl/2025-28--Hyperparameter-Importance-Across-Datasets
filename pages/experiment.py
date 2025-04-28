@@ -180,7 +180,7 @@ def start_progress(set_progress, n_clicks, flow_id, suite_id):
     #TODO: eventually not just first 10
     i = 1
     for task in tasks:
-        task_data = fetcher.fetch_runs(flow_id, task, max_runs=50)
+        task_data = fetcher.fetch_runs(flow_id, task, max_runs=200)
         set_progress((str(i), str(len(tasks))))
         i += 1
         if task_data is None:
@@ -198,20 +198,18 @@ def start_progress(set_progress, n_clicks, flow_id, suite_id):
     running=[
         (Output("fanova", "disabled"), True, False),
     ],
-    progress=[Output("progress", "value"), Output("progress_open_ML", "max")]
+    progress=[Output("progress", "value"), Output("progress", "max")]
 )
-def start_progress(set_progress, n_clicks, cfg_space, data):
-    print(cfg_space)
-    print(data)
-    min_runs = 10
+def run_fanova(set_progress, n_clicks, cfg_space, data):
+    min_runs = 50
     # Finally we prepare to run fanova
     imputed_data, extended_cfg_space = fnvs.impute_data(data, cfg_space)
     processed_data = fnvs.prepare_data(imputed_data, extended_cfg_space)
     # Running fanova takes quite long, so I split it per task
     results = {}
+    set_progress(('0', str(len(processed_data))))
     i = 0
     for task, task_data in processed_data.items():
-        print(i)
         i += 1
         set_progress((str(i), str(len(processed_data))))
         result = fnvs.run_fanova(task_data, extended_cfg_space, min_runs)
