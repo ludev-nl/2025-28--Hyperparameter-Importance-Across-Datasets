@@ -297,10 +297,37 @@ layout = dbc.Container(
         html.Center(
             dbc.Button(
                 "Run Fanova",
+                outline = True,
+                size = "lg",
                 color="primary",
-                id="button",
-                className="mb-3",
+                id="fanova",
+                className="mb-4",
             ),
-        )
+        ),
+        dbc.Row([
+            dbc.Col(
+                    html.Div(
+                        [
+                            dbc.Progress(id="progress", value=0, striped=True, animated=True, className="mt-2")
+                        ]
+                                ),
+                            width={"size":9, "offset":1},
+                            align="center"
+                    ),
+            dbc.Col(
+                    html.Div(
+                        [
+                        dbc.Button(
+                        "Cancel",
+                        id="animation-toggle",
+                        className="mt-2",
+                        color="danger",
+                        outline=True,
+                        n_clicks=0),
+                        ]
+                            ),
+                        width={"size":1}
+                    )
+                            ]),
     ]
 )
