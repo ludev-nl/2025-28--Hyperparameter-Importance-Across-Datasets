@@ -2,6 +2,8 @@ import dash
 from dash import html,dcc
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
+import fanovaservice as fnvs
+import visualiser as vis
 
 dash.register_page(__name__, path='/results_display')
 
