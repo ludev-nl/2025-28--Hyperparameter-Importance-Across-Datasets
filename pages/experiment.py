@@ -1,9 +1,8 @@
 import dash
-from dash import Input, Output, State, dcc, html, callback
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter, Constant
-import help
+from dash_extensions.enrich import Input, Output, State, callback, dcc, html, Serverside
 from re import escape, split
 
 # TODO: change paths/folder structure
@@ -170,7 +169,7 @@ def update_progress(n_intervals, n_clicks, current_value):
 
 #TODO: max_runs have to be deleted
 def start_progress(set_progress, n_clicks, flow_id, suite_id):
-    tasks = fetcher.fetch_tasks(suite_id)
+    tasks = fetcher.fetch_tasks(suite_id)[:5]
 
     if tasks is None:
         raise PreventUpdate
@@ -182,11 +181,13 @@ def start_progress(set_progress, n_clicks, flow_id, suite_id):
     for task in tasks:
         task_data = fetcher.fetch_runs(flow_id, task, max_runs=50)
         set_progress((str(i), str(len(tasks))))
-        i+=1
+        i += 1
         if task_data is None:
             continue
         data[task] = fetcher.coerce_types(task_data)
-    return (fnvs.auto_configspace(data).to_serialized_dict(), help.dictDFtoJSON(data))
+    return Serverside(fnvs.auto_configspace(data)), \
+           Serverside(data)
+
 #placeholder code for table
 table_header = [html.Thead(html.Tr([html.Th("Task ID"), html.Th("Original runs"), html.Th("Filtered runs")]))]
 

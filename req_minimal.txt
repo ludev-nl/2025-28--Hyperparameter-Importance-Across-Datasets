@@ -5,3 +5,4 @@ flake8
 mypy
 dash
 dash_bootstrap_components
+dash_extensions
