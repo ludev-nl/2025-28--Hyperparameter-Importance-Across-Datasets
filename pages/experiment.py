@@ -4,6 +4,7 @@ import dash_bootstrap_components as dbc
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter, Constant
 from dash_extensions.enrich import Input, Output, State, callback, dcc, html, Serverside
 from re import escape, split
+import pandas as pd
 
 # TODO: change paths/folder structure
 # import sys
@@ -188,6 +189,39 @@ def start_progress(set_progress, n_clicks, flow_id, suite_id):
     return Serverside(fnvs.auto_configspace(data)), \
            Serverside(data)
 
+@callback(
+    Input("fanova", "n_clicks"),
+    State("raw_configspace", "data"),
+    State("raw_data_store", "data"),
+    prevent_initial_call=True,
+    background=True,
+    running=[
+        (Output("fanova", "disabled"), True, False),
+    ],
+    progress=[Output("progress", "value"), Output("progress_open_ML", "max")]
+)
+def start_progress(set_progress, n_clicks, cfg_space, data):
+    print(cfg_space)
+    print(data)
+    min_runs = 10
+    # Finally we prepare to run fanova
+    imputed_data, extended_cfg_space = fnvs.impute_data(data, cfg_space)
+    processed_data = fnvs.prepare_data(imputed_data, extended_cfg_space)
+    # Running fanova takes quite long, so I split it per task
+    results = {}
+    i = 0
+    for task, task_data in processed_data.items():
+        print(i)
+        i += 1
+        set_progress((str(i), str(len(processed_data))))
+        result = fnvs.run_fanova(task_data, extended_cfg_space, min_runs)
+        if result:
+            results[task] = result
+    results = pd.DataFrame.from_dict(results, orient='index')
+    # In Dash, we can't use this function: it is here so you
+    # can inspect the results.
+    fnvs.export_csv(123, 123, results)
+
 #placeholder code for table
 table_header = [html.Thead(html.Tr([html.Th("Task ID"), html.Th("Original runs"), html.Th("Filtered runs")]))]
 
@@ -225,7 +259,7 @@ config_content = html.Div([
                               html.Br(),
                               dbc.Row([
                                             dbc.Col(html.Div(
-                                                        dcc.Dropdown(hyperparameters,id='hyperparameter')
+                                                        id='hyperparameter_dd'
                                                     ),width={'size':6,'offset':3}),
                                       ]),
                               html.Br(),
@@ -252,7 +286,6 @@ config_content = html.Div([
     prevent_initial_call=True
 )
 def show_adequate_range(hyperparameter, filtered_config, raw_configspace):
-    raw_configspace = cfg_space
     if filtered_config is not None and hyperparameter in filtered_config.keys():
         hyperparameter_value = filtered_config[hyperparameter]
     else:
@@ -310,6 +343,13 @@ def show_adequate_range(hyperparameter, filtered_config, raw_configspace):
     else:
         return None
 
+# @callback(
+#     Output(component_id='hyperparameter_dd', component_property='children'),
+#     Input(component_id='raw_configspace', component_property='data')
+# )
+# def update_param_dropdown(raw_configspace):
+#     return dcc.Dropdown(list(raw_configspace.keys()),id='hyperparameter')
+
 @callback(
     Output(component_id='filtered_config_float', component_property='data'),
     Input(component_id='min_float_value', component_property='value'),
@@ -320,7 +360,6 @@ def show_adequate_range(hyperparameter, filtered_config, raw_configspace):
     prevent_initial_call=True
 )
 def update_float_range_hyperparameter(min_float_value,max_float_value,hyperparameter,filtered_config_float,raw_configspace):
-    raw_configspace = cfg_space
     if filtered_config_float is None:
         filtered_config_float = {}
     if (float(min_float_value) == raw_configspace[hyperparameter]['lower']) and (float(max_float_value) == raw_configspace[hyperparameter]['upper']):
@@ -340,7 +379,6 @@ def update_float_range_hyperparameter(min_float_value,max_float_value,hyperparam
     prevent_initial_call=True
 )
 def update_int_range_hyperparameter(min_int_value,max_int_value,hyperparameter,filtered_config_int,raw_configspace):
-    raw_configspace = cfg_space
     if filtered_config_int is None:
         filtered_config_int = {}
     if (min_int_value == raw_configspace[hyperparameter]['lower']) and (max_int_value == raw_configspace[hyperparameter]['upper']):
@@ -360,7 +398,6 @@ def update_int_range_hyperparameter(min_int_value,max_int_value,hyperparameter,f
     prevent_initial_call=True
 )
 def update_categorical_hyperparameter(categories,hyperparameter,filtered_config_cat, raw_configspace):
-    raw_configspace = cfg_space
     if filtered_config_cat is None:
         filtered_config_cat = {}
     if (set(categories) == set(raw_configspace[hyperparameter]['choices'])):
