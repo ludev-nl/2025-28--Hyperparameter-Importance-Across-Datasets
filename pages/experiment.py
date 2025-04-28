@@ -4,6 +4,7 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter, Constant
 import help
+from re import escape, split
 
 # TODO: change paths/folder structure
 # import sys
@@ -32,6 +33,7 @@ items = [
 
 #list of options for the flow selection dropdown bar
 options_df = fetcher.fetch_flows()
+options_df['id_str'] = options_df.index.astype(str)
 #convert the fetched data into the right format for the dropdown menu
 #returns a list of dictionaries
 def df_to_dict_list(df, col):
@@ -75,7 +77,7 @@ flow_content = html.Div([
                                         dbc.Col(
                                                 html.Div(
                                                     [
-                                                        dbc.Progress(id="progress", value=0, striped=True, animated=True, className="mt-2")
+                                                        dbc.Progress(id="progress_open_ML", value=0, striped=True, animated=True, className="mt-2")
                                                     ]
                                                             ),
                                                         width={"size":9, "offset":1},
@@ -113,13 +115,25 @@ def update_multi_options(search_value):
     #minimum lenght is added to make sure the program shows previously selected items
     #rather than an empty seachbar
 
+    def mask (df, token):
+        if token.isnumeric():
+            col = 'id_str'
+        else:
+            col = 'full_name'
+        return df[col].str.contains(token)
+
     if not search_value:
         raise PreventUpdate
 
     if len(search_value) < 3:
         return []
 
-    lst = [o for o in options if search_value in o['label']]
+    search_value = escape(search_value)
+    results = options_df
+    for token in split('[ .]', search_value):
+        results = results[mask(results, token)]
+
+    lst = df_to_dict_list(results, 'full_name')
 
     return lst[:50]
 
@@ -151,7 +165,7 @@ def update_progress(n_intervals, n_clicks, current_value):
     running=[
         (Output("Fetch", "disabled"), True, False),
     ],
-    progress=[Output("progress", "value"), Output("progress", "max")]
+    progress=[Output("progress_open_ML", "value"), Output("progress_open_ML", "max")]
 )
 
 #TODO: max_runs have to be deleted
