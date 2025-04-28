@@ -3,6 +3,7 @@ from dash import Input, Output, State, dcc, html, callback
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter, Constant
+import help
 
 # TODO: change paths/folder structure
 # import sys
@@ -140,7 +141,8 @@ def update_progress(n_intervals, n_clicks, current_value):
 
 
 @callback(
-    Output("progress-interval", "disabled"),
+    Output("raw_configspace", 'data'),
+    Output("raw_data_store", 'data'),
     Input("Fetch", "n_clicks"),
     State("Flow-input", "value"),
     State("suite_dropdown", "value"),
@@ -150,24 +152,27 @@ def update_progress(n_intervals, n_clicks, current_value):
         (Output("Fetch", "disabled"), True, False),
     ],
     progress=[Output("progress", "value"), Output("progress", "max")]
-
 )
-#TODO: max_runs have to be deleted 
-def start_progress(set_progress, n_clicks, flow_id, suite_id): 
+
+#TODO: max_runs have to be deleted
+def start_progress(set_progress, n_clicks, flow_id, suite_id):
     tasks = fetcher.fetch_tasks(suite_id)
+
+    if tasks is None:
+        raise PreventUpdate
+
     set_progress(('0', str(len(tasks))))
     data = {}
     #TODO: eventually not just first 10
-    i = 0
+    i = 1
     for task in tasks:
         task_data = fetcher.fetch_runs(flow_id, task, max_runs=50)
         set_progress((str(i), str(len(tasks))))
-        i+=1 
+        i+=1
         if task_data is None:
             continue
         data[task] = fetcher.coerce_types(task_data)
-    return False
-
+    return (fnvs.auto_configspace(data).to_serialized_dict(), help.dictDFtoJSON(data))
 #placeholder code for table
 table_header = [html.Thead(html.Tr([html.Th("Task ID"), html.Th("Original runs"), html.Th("Filtered runs")]))]
 
