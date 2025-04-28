@@ -206,7 +206,8 @@ table = dbc.Table(
     )
 
 #placeholder code for configspace
-cfg_space = ConfigurationSpace.from_json("example_cfgspace.json")
+cfg_space = {hyper['name']: hyper for hyper in ConfigurationSpace.from_json("example_cfgspace.json").to_serialized_dict()['hyperparameters']}
+print(cfg_space)
 hyperparameters = list(cfg_space.keys())
 
 config_content = html.Div([
@@ -236,16 +237,28 @@ config_content = html.Div([
                                                 width = {"size": 6, "offset": 3},
                                             )
                                       ]),
+                              dcc.Store(id='filtered_config_int'),
+                              dcc.Store(id='filtered_config_float'),
+                              dcc.Store(id='filtered_config_cat'),
+                              dcc.Store(id='filtered_config'),
+                              html.Div(id='config')
                           ])
 
 @callback(
     Output(component_id='range', component_property='children'),
     Input(component_id='hyperparameter', component_property='value'),
+    State(component_id='filtered_config', component_property='data'),
+    State(component_id='raw_configspace', component_property='data'),
     prevent_initial_call=True
 )
-def show_adequate_range(hyperparameter):
-    hyperparameter_value = cfg_space[hyperparameter]
-    if isinstance(hyperparameter_value, UniformFloatHyperparameter):
+def show_adequate_range(hyperparameter, filtered_config, raw_configspace):
+    raw_configspace = cfg_space
+    if filtered_config is not None and hyperparameter in filtered_config.keys():
+        hyperparameter_value = filtered_config[hyperparameter]
+    else:
+        hyperparameter_value = raw_configspace[hyperparameter]
+
+    if hyperparameter_value['type'] == 'uniform_float':
         return(
         dbc.Col(width=3),
         dbc.Col(
@@ -253,7 +266,7 @@ def show_adequate_range(hyperparameter):
                     width=1
                 ),
         dbc.Col(
-                    dbc.Input(type="text",id="min_float_value",value=str(hyperparameter_value.lower)),
+                    dbc.Input(type="text",id="min_float_value",value=str(hyperparameter_value['lower'])),
                     width=2
                 ),
         dbc.Col(
@@ -261,12 +274,12 @@ def show_adequate_range(hyperparameter):
                     width=1
                 ),
         dbc.Col(
-                    dbc.Input(type="text",id="max_float_value",value=str(hyperparameter_value.upper),
+                    dbc.Input(type="text",id="max_float_value",value=str(hyperparameter_value['upper']),
                               pattern=r"([+-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+))"),
                     width=2
                 ),
         )
-    elif isinstance(hyperparameter_value, UniformIntegerHyperparameter):
+    elif hyperparameter_value['type'] == 'uniform_int':
         return(
         dbc.Col(width=3),
         dbc.Col(
@@ -274,7 +287,7 @@ def show_adequate_range(hyperparameter):
                     width=1
                 ),
         dbc.Col(
-                    dbc.Input(type="number",id="min_int_value",value=hyperparameter_value.lower),
+                    dbc.Input(type="number",id="min_int_value",value=hyperparameter_value['lower']),
                     width=2
                 ),
         dbc.Col(
@@ -282,21 +295,102 @@ def show_adequate_range(hyperparameter):
                     width=1
                 ),
         dbc.Col(
-                    dbc.Input(type="number",id="max_int_value",value=hyperparameter_value.upper),
+                    dbc.Input(type="number",id="max_int_value",value=hyperparameter_value['upper']),
                     width=2
                 ),
         )
-    elif isinstance(hyperparameter_value, CategoricalHyperparameter):
+    elif hyperparameter_value['type'] == 'categorical':
         return(
         dbc.Col(width=3),
         dbc.Col(
-                    html.Div(dcc.Dropdown(hyperparameter_value.choices,hyperparameter_value.choices,multi=True)),
+                    html.Div(dcc.Dropdown(raw_configspace[hyperparameter]['choices'],hyperparameter_value['choices'],multi=True, id='categories')),
                     width=6
                 ),
         )
     else:
         return None
 
+@callback(
+    Output(component_id='filtered_config_float', component_property='data'),
+    Input(component_id='min_float_value', component_property='value'),
+    Input(component_id='max_float_value', component_property='value'),
+    State(component_id='hyperparameter', component_property='value'),
+    State(component_id='filtered_config_float', component_property='data'),
+    State(component_id='raw_configspace', component_property='data'),
+    prevent_initial_call=True
+)
+def update_float_range_hyperparameter(min_float_value,max_float_value,hyperparameter,filtered_config_float,raw_configspace):
+    raw_configspace = cfg_space
+    if filtered_config_float is None:
+        filtered_config_float = {}
+    if (float(min_float_value) == raw_configspace[hyperparameter]['lower']) and (float(max_float_value) == raw_configspace[hyperparameter]['upper']):
+        if hyperparameter in filtered_config_float.keys():
+            del filtered_config_float[hyperparameter]
+        return filtered_config_float
+    filtered_config_float[hyperparameter] = {'type': 'uniform_float', 'name': raw_configspace[hyperparameter]['name'], 'lower': float(min_float_value), 'upper': float(max_float_value)}
+    return filtered_config_float
+
+@callback(
+    Output(component_id='filtered_config_int', component_property='data'),
+    Input(component_id='min_int_value', component_property='value'),
+    Input(component_id='max_int_value', component_property='value'),
+    State(component_id='hyperparameter', component_property='value'),
+    State(component_id='filtered_config_int', component_property='data'),
+    State(component_id='raw_configspace', component_property='data'),
+    prevent_initial_call=True
+)
+def update_int_range_hyperparameter(min_int_value,max_int_value,hyperparameter,filtered_config_int,raw_configspace):
+    raw_configspace = cfg_space
+    if filtered_config_int is None:
+        filtered_config_int = {}
+    if (min_int_value == raw_configspace[hyperparameter]['lower']) and (max_int_value == raw_configspace[hyperparameter]['upper']):
+        if hyperparameter in filtered_config_int.keys():
+            del filtered_config_int[hyperparameter]
+        return filtered_config_int
+    else:
+        filtered_config_int[hyperparameter] = {'type': 'uniform_int', 'name': raw_configspace[hyperparameter]['name'], 'lower': min_int_value, 'upper': max_int_value}
+        return filtered_config_int
+
+@callback(
+    Output(component_id='filtered_config_cat', component_property='data'),
+    Input(component_id='categories', component_property='value'),
+    State(component_id='hyperparameter', component_property='value'),
+    State(component_id='filtered_config_cat', component_property='data'),
+    State(component_id='raw_configspace', component_property='data'),
+    prevent_initial_call=True
+)
+def update_categorical_hyperparameter(categories,hyperparameter,filtered_config_cat, raw_configspace):
+    raw_configspace = cfg_space
+    if filtered_config_cat is None:
+        filtered_config_cat = {}
+    if (set(categories) == set(raw_configspace[hyperparameter]['choices'])):
+        if hyperparameter in filtered_config_cat.keys():
+            del filtered_config_cat[hyperparameter]
+        return filtered_config_cat
+    filtered_config_cat[hyperparameter] = {'type': 'categorical', 'name': raw_configspace[hyperparameter]['name'], 'choices': categories}
+    return filtered_config_cat
+
+@callback(
+    Output(component_id='filtered_config', component_property='data'),
+    Input(component_id='filtered_config_int', component_property='data'),
+    Input(component_id='filtered_config_float', component_property='data'),
+    Input(component_id='filtered_config_cat', component_property='data'),
+    prevent_initial_call=True
+)
+def concat_filtered(filtered_config_int, filtered_config_float, filtered_config_cat):
+    dict = {}
+    for config in (filtered_config_int,filtered_config_float,filtered_config_cat):
+        if config is not None:
+            dict.update(config)
+    return dict
+
+@callback(
+    Output(component_id='config', component_property='children'),
+    Input(component_id='filtered_config', component_property='data'),
+    prevent_initial_call=True
+)
+def display_filtered(filtered_config):
+    return str(filtered_config)
 
 layout = dbc.Container(
     [
