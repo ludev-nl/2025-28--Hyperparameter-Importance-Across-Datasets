@@ -189,15 +189,23 @@ def run_fanova(task_data: pd.DataFrame,
     result = {}
     index = -1
 
-    for param_name, param in cfg_space.items():
-        index += 1
-        if isinstance(param, Constant):
-            continue
+    param_count = len(cfg_space)
+    non_const = [i for i in range(param_count)
+                 if not isinstance(cfg_space[cfg_space.at[i]], Constant)]
+    combis = [(i,j) for i in non_const for j in non_const if i < j]
 
-        score = fnv.quantify_importance((index,))[(index,)]
-        result[param_name] = score['individual importance']
+    # for param_name, param in cfg_space.items():
+    #     index += 1
+    #     if isinstance(param, Constant):
+    #         continue
 
-    # TODO: pairwise marginals
+    #     score = fnv.quantify_importance((index,))[(index,)]
+    #     result[param_name] = score['individual importance']
+
+    for combi in combis:
+        score = fnv.quantify_importance(combi)
+        print(score)
+
 
     return result
 
