@@ -23,14 +23,6 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 dash.register_page(__name__, path='/experiment')
 
 
-# TODO: Exact items will be changed later
-items = [
-    dbc.DropdownMenuItem("Item 1"),
-    dbc.DropdownMenuItem("Item 2"),
-    dbc.DropdownMenuItem("Item 3"),
-]
-
-
 #list of options for the flow selection dropdown bar
 options_df = fetcher.fetch_flows()
 options_df['id_str'] = options_df.index.astype(str)
@@ -41,7 +33,6 @@ def df_to_dict_list(df, col):
             for id, row in df.iterrows()]
 
 options = df_to_dict_list(options_df, 'full_name')
-
 
 
 flow_content = html.Div([
@@ -138,22 +129,6 @@ def update_multi_options(search_value):
     return lst[:50]
 
 
-# progress bar will show after callback
-@app.callback(
-    Output("progress", "value"),
-    Output("progress-interval", "disabled"),
-    Input("progress-interval", "n_intervals"),
-    Input("animation-toggle", "n_clicks"),
-    State("progress", "value"),
-)
-def update_progress(n_intervals, n_clicks, current_value):
-    if n_clicks > 0:
-        return 0, True
-
-    new_value = min(current_value + 10, 100)
-    return new_value, new_value >= 100
-
-
 @callback(
     Output("raw_configspace", 'data'),
     Output("raw_data_store", 'data'),
@@ -164,33 +139,35 @@ def update_progress(n_intervals, n_clicks, current_value):
     background=True,
     running=[
         (Output("Fetch", "disabled"), True, False),
+        (Output("fanova", "disabled"), True, False),
     ],
     progress=[Output("progress_open_ML", "value"), Output("progress_open_ML", "max")]
 )
-
-#TODO: max_runs have to be deleted
-def start_progress(set_progress, n_clicks, flow_id, suite_id):
-    tasks = fetcher.fetch_tasks(suite_id)[:5]
+def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
+    tasks = fetcher.fetch_tasks(suite_id)
 
     if tasks is None:
         raise PreventUpdate
 
     set_progress(('0', str(len(tasks))))
     data = {}
-    #TODO: eventually not just first 10
     i = 1
     for task in tasks:
+        #TODO: max_runs have to be deleted
         task_data = fetcher.fetch_runs(flow_id, task, max_runs=200)
         set_progress((str(i), str(len(tasks))))
         i += 1
         if task_data is None:
             continue
         data[task] = fetcher.coerce_types(task_data)
-    return Serverside(fnvs.auto_configspace(data)), \
+
+    set_progress(('0', '100'))
+
+    return fnvs.auto_configspace(data).to_serialized_dict(), \
            Serverside(data)
 
 @callback(
-    Output("fanova_results", "data"), 
+    Output("fanova_results", "data"),
     Input("fanova", "n_clicks"),
     State("raw_configspace", "data"),
     State("raw_data_store", "data"),
@@ -202,6 +179,9 @@ def start_progress(set_progress, n_clicks, flow_id, suite_id):
     progress=[Output("progress", "value"), Output("progress", "max")]
 )
 def run_fanova(set_progress, n_clicks, cfg_space, data):
+    if cfg_space is None or data is None:
+        raise PreventUpdate
+
     min_runs = 50
     # Finally we prepare to run fanova
     imputed_data, extended_cfg_space = fnvs.impute_data(data, cfg_space)
@@ -217,12 +197,12 @@ def run_fanova(set_progress, n_clicks, cfg_space, data):
         if result:
             results[task] = result
     results = pd.DataFrame.from_dict(results, orient='index')
-    
+
+    set_progress(('0', '100'))
+
     json_results = results.to_json()
     return json_results
-    # In Dash, we can't use this function: it is here so you
-    # can inspect the results.
-    # fnvs.export_csv(123, 123, results)
+
 
 #placeholder code for table
 table_header = [html.Thead(html.Tr([html.Th("Task ID"), html.Th("Original runs"), html.Th("Filtered runs")]))]
@@ -455,6 +435,7 @@ layout = dbc.Container(
                 color="primary",
                 id="fanova",
                 className="mb-4",
+                disabled = True
             ),
         ),
         dbc.Row([
