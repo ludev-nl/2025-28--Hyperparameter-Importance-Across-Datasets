@@ -62,6 +62,7 @@ app.layout = html.Div([
     #datatype is config space element, but that is initialised with None type
     dcc.Store(id="raw_configspace",storage_type= "session", data=None),
     dcc.Store(id="filtered_configspace",storage_type= "session", data=None),
+    dcc.Store(id="fanova_results", storage_type="session", data=None),
     dcc.Location(id="url"),
     sidebar,
     content

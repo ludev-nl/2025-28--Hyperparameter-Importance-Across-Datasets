@@ -190,6 +190,7 @@ def start_progress(set_progress, n_clicks, flow_id, suite_id):
            Serverside(data)
 
 @callback(
+    Output("fanova_results", "data"), 
     Input("fanova", "n_clicks"),
     State("raw_configspace", "data"),
     State("raw_data_store", "data"),
@@ -216,9 +217,12 @@ def run_fanova(set_progress, n_clicks, cfg_space, data):
         if result:
             results[task] = result
     results = pd.DataFrame.from_dict(results, orient='index')
+    
+    json_results = results.to_json()
+    return json_results
     # In Dash, we can't use this function: it is here so you
     # can inspect the results.
-    fnvs.export_csv(123, 123, results)
+    # fnvs.export_csv(123, 123, results)
 
 #placeholder code for table
 table_header = [html.Thead(html.Tr([html.Th("Task ID"), html.Th("Original runs"), html.Th("Filtered runs")]))]
