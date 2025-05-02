@@ -132,6 +132,7 @@ def update_multi_options(search_value):
 @callback(
     Output("raw_configspace", 'data'),
     Output("raw_data_store", 'data'),
+    Output('Fetch', 'n_clicks'),
     Input("Fetch", "n_clicks"),
     State("Flow-input", "value"),
     State("suite_dropdown", "value"),
@@ -145,6 +146,9 @@ def update_multi_options(search_value):
     progress=[Output("progress_open_ML", "value"), Output("progress_open_ML", "max")]
 )
 def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
+    if n_clicks is None or flow_id is None or suite_id is None:
+        raise PreventUpdate
+
     tasks = fetcher.fetch_tasks(suite_id)
 
     if tasks is None:
@@ -166,11 +170,13 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
         data[task] = fetcher.coerce_types(task_data)
 
     return (fnvs.auto_configspace(data).to_serialized_dict(),
-            Serverside(data))
+            Serverside(data),
+            None)
 
 
 @callback(
     Output("fanova_results", "data"),
+    Output('fanova', 'n_clicks'),
     Input("fanova", "n_clicks"),
     State("raw_configspace", "data"),
     State("raw_data_store", "data"),
@@ -183,7 +189,7 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
     progress=[Output("progress", "value"), Output("progress", "max")]
 )
 def run_fanova(set_progress, n_clicks, cfg_space, data):
-    if cfg_space is None or data is None:
+    if n_clicks is None or cfg_space is None or data is None:
         raise PreventUpdate
 
     cfg_space = ConfigurationSpace.from_serialized_dict(cfg_space)
@@ -207,7 +213,7 @@ def run_fanova(set_progress, n_clicks, cfg_space, data):
     set_progress(('0', '100'))
 
     json_results = results.to_json()
-    return json_results
+    return json_results, None
 
 
 #placeholder code for table
