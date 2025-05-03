@@ -22,8 +22,7 @@ imp_space = ConfigurationSpace({'int': (-1, 5),
                                 'cat': ['a', 'b', 'c',
                                         'IMPUTE_HPIAD', '_IMPUTE_HPIAD'],
                                 'full_cat': ['a', 'b', 'c', 'IMPUTE_HPIAD'],
-                                'const': ['IMPUTE_HPIAD', '_IMPUTE_HPIAD'],
-                                'full_const': -1})
+                                'const': ['IMPUTE_HPIAD', '_IMPUTE_HPIAD']})
 
 
 class FanovaTests(unittest.TestCase):
@@ -89,6 +88,10 @@ class FanovaTests(unittest.TestCase):
                 values = np.array(data[param_name])
                 self.assertTrue(param.legal_value(values).all())
 
+        # Assert that all constant hyperparameters are gone
+        for p in new_space.values():
+            self.assertNotIsInstance(p, Constant)
+
         # Assert that the new configspace is correct
         self.cfg_space_equal(new_space, imp_space)
 
@@ -96,6 +99,8 @@ class FanovaTests(unittest.TestCase):
         default = dict(cfg_space.get_default_configuration())
         imputed = {id: data.fillna(default).dropna(axis=1, how='any')
                    for id, data in self.data.items()}
+        imputed = {id: data.drop(columns=data.columns[data.nunique() <= 1])
+                   for id, data in imputed.items()}
         prepared = fnvs.prepare_data(imputed, cfg_space)
 
         for prep in prepared.values():
@@ -112,7 +117,7 @@ class FanovaTests(unittest.TestCase):
     def test_run(self):
         # Replaces data by relevant numeric data for fanova
         def prep(val):
-            if isinstance(val, int) and val < 0:
+            if val == -1:
                 return 0
 
             elif isinstance(val, str):
@@ -133,12 +138,6 @@ class FanovaTests(unittest.TestCase):
 
         # Run fANOVA once succesfully
         result = fnvs.run_fanova(prepared, cfg_space, min_runs=0)
-        # And check that all non-constant hyperparams appear
-        for param_name, param in cfg_space.items():
-            if isinstance(param, Constant):
-                self.assertNotIn(param_name, result.keys())
-            else:
-                self.assertIn(param_name, result.keys())
 
         # Run fANOVA once unsuccesfully
         result = fnvs.run_fanova(prepared, cfg_space, min_runs=len(prepared)+1)
