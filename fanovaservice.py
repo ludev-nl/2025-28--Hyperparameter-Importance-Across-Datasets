@@ -4,7 +4,7 @@ import pandas as pd
 from fanova import fANOVA
 from ConfigSpace import ConfigurationSpace
 from ConfigSpace import Constant
-from ConfigSpace import CategoricalHyperparameter
+from ConfigSpace import CategoricalHyperparameter, UniformFloatHyperparameter
 from ConfigSpace.hyperparameters import NumericalHyperparameter
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
@@ -26,7 +26,7 @@ def auto_configspace(data: dict[int, pd.DataFrame]) -> ConfigurationSpace:
                      | float
                      | str] = {}
 
-    params_data = full_data.drop(columns=['value'])
+    params_data = full_data.drop(columns=['value'], errors='ignore')
     params_data = params_data.dropna(axis=1, how='all')
     num_cols = params_data.select_dtypes(include=['number']).columns
     cat_cols = params_data.select_dtypes(exclude=['number']).columns
@@ -160,12 +160,31 @@ def prepare_data(data: dict[int, pd.DataFrame],
     cat = [(p_name, cfg_space[p_name]) for p_name in cfg_space.keys()
            if isinstance(cfg_space[p_name], CategoricalHyperparameter)]
 
+    num = [(p_name, cfg_space[p_name]) for p_name in cfg_space.keys()
+           if isinstance(cfg_space[p_name], NumericalHyperparameter)]
+
+    n_bins = 20
+
     for task, task_data in data.items():
         prep = task_data.apply(np.round, decimals=ROUND_PLACES)
 
         for p_name, param in cat:
             prep[p_name] = prep[p_name].map((lambda option:
                                              param.choices.index(option)))
+
+        # TODO: for this to have actual effect, they would need to be ordinal
+        for p_name, param in num:
+            if prep[p_name].nunique() <= n_bins:
+                continue
+            sorted = np.sort(prep[p_name])
+            bounds_index = np.linspace(0, len(sorted) - 1, n_bins)[1:].astype('int')
+            bounds = sorted[bounds_index]
+            bin_map = np.digitize(prep[p_name], bounds)
+            for i in range(n_bins):
+                mask = (bin_map == i)
+                value = sorted[0] if i == 0 else bounds[i-1]
+                if mask.any():
+                    prep.loc[mask, p_name] = value
 
         res[task] = prep.astype(np.float64)
 
@@ -203,4 +222,4 @@ def export_csv(flow_id: int,
     # TODO: this is just for current testing. Eventually this
     # will be sent to Dash components without creating a file.
     # The first column is index, so dont plot that!
-    results.to_csv(f'fanova_f{flow_id}_s{suite_id}.csv')
+    results.to_csv(f'fanova_f{flow_id}_s{suite_id}_b.csv')
