@@ -2,14 +2,26 @@ import dash
 from dash import html,dcc
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
+from dash_extensions.enrich import Input, Output, State, callback, dcc, html, Serverside
 import fanovaservice as fnvs
 import visualiser as vis
+from pandas import read_json
+from io import StringIO
 
 dash.register_page(__name__, path='/results_display')
 
 # currently use two blank figures as placeholder
 violinplot = go.Figure()
 cdplot = go.Figure()
+
+@callback(
+    Input("fanova_results", "data"),
+    Output("violin-plot", "figure")
+)
+def display_results(fanova_results):
+    fanova_df = read_json(StringIO(fanova_results))
+    return vis.violinplot(fanova_df, False)
+
 
 layout = dbc.Container([
         html.H1('Here are the results:'),
@@ -21,7 +33,7 @@ layout = dbc.Container([
                 dbc.Col([
                         html.H5('Critical Difference Plot'),
                         dcc.Graph(figure=cdplot, id='cd-plot'),
-                ], width=6)     
+                ], width=6)
         ]),
         html.Div([
             html.Div('Download the csv files:'),

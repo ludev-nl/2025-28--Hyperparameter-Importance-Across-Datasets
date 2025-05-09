@@ -3,16 +3,26 @@ from dash import Input, Output, dcc, html, DiskcacheManager
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 import pandas as pd
+<<<<<<< HEAD
 import diskcache
 # from dash_extensions.enrich import  DashProxy, Serverside, ServersideOutputTransform
+=======
+import os
+import diskcache
+from dash_extensions.enrich import DashProxy, ServersideOutputTransform
+>>>>>>> 809fb8abb6ac18a69a6cd8ad9193f4d50495152e
   # Diskcache for non-production apps when developing locally
 
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheManager(cache)
 
 
+<<<<<<< HEAD
 app = dash.Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],background_callback_manager=background_callback_manager)
 # app = DashProxy(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],background_callback_manager=background_callback_manager,transforms=[ServersideOutputTransform()])
+=======
+app = DashProxy(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],background_callback_manager=background_callback_manager, transforms=[ServersideOutputTransform()])
+>>>>>>> 809fb8abb6ac18a69a6cd8ad9193f4d50495152e
 
 
 SIDEBAR_STYLE = {
@@ -56,12 +66,12 @@ app.layout = html.Div([
     #storage_type is used to specify how long the data is stored for.
     #session means that data is cleared after browser is closed
 
-    #datatype is a dictionary
-    dcc.Store(id="raw_data_store", storage_type="session", data={}),
-    dcc.Store(id="filtered_data", storage_type= "session", data={}),
+    dcc.Store(id="raw_data_store", storage_type="session"),
+    dcc.Store(id="filtered_data", storage_type= "session"),
     #datatype is config space element, but that is initialised with None type
-    dcc.Store(id="raw_configspace",storage_type= "session", data=None),
+    dcc.Store(id="raw_configspace",storage_type= "session", data={}),
     dcc.Store(id="filtered_configspace",storage_type= "session", data=None),
+    dcc.Store(id="fanova_results", storage_type="session", data=None),
     dcc.Location(id="url"),
     sidebar,
     content
