@@ -7,8 +7,6 @@ import help
 from re import escape, split
 
 # TODO: change paths/folder structure
-# import sys
-# sys.path.append('../')
 
 import sys
 import os
@@ -68,7 +66,7 @@ flow_content = html.Div([
                             html.Br(),
                             dbc.Row(html.Center(html.Div(
                                 [
-                                    dbc.Button("Fetch", id= "Fetch", outline = True, size="lg", color = "primary", className="mb-4"),
+                                    dbc.Button("Fetch", id= "Fetch", outline = True, size="lg", color = "primary", className="mb-4",disabled=False),
                                 ]
                             ))),
 
@@ -77,22 +75,26 @@ flow_content = html.Div([
                                         dbc.Col(
                                                 html.Div(
                                                     [
-                                                        dbc.Progress(id="progress_open_ML", value=0, striped=True, animated=True, className="mt-2")
+                                                        dbc.Progress(id="progress_open_ML", value=0, striped=True, animated=True, className="mt-2",   style={'display':'none'})
                                                     ]
                                                             ),
                                                         width={"size":9, "offset":1},
-                                                        align="center"
+                                                        align="center",
+
+
+
                                                 ),
                                         dbc.Col(
                                                 html.Div(
                                                     [
                                                     dbc.Button(
                                                     "Cancel",
-                                                    id="animation-toggle",
+                                                    id="cancel_button",
                                                     className="mt-2",
                                                     color="danger",
                                                     outline=True,
-                                                    n_clicks=0),
+                                                    n_clicks=0,
+                                                    style={'display':'none'}),
                                                     ]
                                                         ),
                                                     width={"size":1}
@@ -138,20 +140,21 @@ def update_multi_options(search_value):
     return lst[:50]
 
 
-# progress bar will show after callback
-@app.callback(
-    Output("progress", "value"),
-    Output("progress-interval", "disabled"),
-    Input("progress-interval", "n_intervals"),
-    Input("animation-toggle", "n_clicks"),
-    State("progress", "value"),
-)
-def update_progress(n_intervals, n_clicks, current_value):
-    if n_clicks > 0:
-        return 0, True
+# # progress bar will show after callback
+# @app.callback(
+#     Output("progress", "value"),
+#     Output("progress-interval", "disabled"),
+#     Input("progress-interval", "n_intervals"),
+#     Input("animation-toggle", "n_clicks"),
+#     State("progress", "value"),
+# )
+# def update_progress(n_intervals, n_clicks, current_value):
+#     if n_clicks > 0:
+#         return 0, True
 
-    new_value = min(current_value + 10, 100)
-    return new_value, new_value >= 100
+#     new_value = min(current_value + 10, 100)
+#     return new_value, new_value >= 100
+
 
 
 @callback(
@@ -164,11 +167,13 @@ def update_progress(n_intervals, n_clicks, current_value):
     background=True,
     running=[
         (Output("Fetch", "disabled"), True, False),
+        (Output("progress_open_ML", "style"), {"display": "block"}, {"display": "none"}),
+         (Output("cancel_button", "style"), {"display": "block"}, {"display": "none"})
     ],
     progress=[Output("progress_open_ML", "value"), Output("progress_open_ML", "max")]
 )
 
-#TODO: max_runs have to be deleted
+
 def start_progress(set_progress, n_clicks, flow_id, suite_id):
     tasks = fetcher.fetch_tasks(suite_id)
 
@@ -298,7 +303,12 @@ def show_adequate_range(hyperparameter):
 
 
 layout = dbc.Container(
-    [
+    [       #datatype is a dictionary
+        dcc.Store(id="raw_data_store", storage_type="session", data={}),
+        dcc.Store(id="filtered_data", storage_type= "session", data={}),
+        #datatype is config space element, but that is initialised with None type
+        dcc.Store(id="raw_configspace",storage_type= "session", data=None),
+        dcc.Store(id="filtered_configspace",storage_type= "session", data=None),
         html.H1("Experiment Setup"),
         dcc.Markdown('''
                 1. Choose which flows and suites you want to include in the analysis. Click the fetch button to fetch them.
