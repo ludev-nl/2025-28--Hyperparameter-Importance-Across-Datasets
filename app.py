@@ -3,26 +3,16 @@ from dash import Input, Output, dcc, html, DiskcacheManager
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 import pandas as pd
-<<<<<<< HEAD
-import diskcache
-# from dash_extensions.enrich import  DashProxy, Serverside, ServersideOutputTransform
-=======
 import os
 import diskcache
 from dash_extensions.enrich import DashProxy, ServersideOutputTransform
->>>>>>> 809fb8abb6ac18a69a6cd8ad9193f4d50495152e
   # Diskcache for non-production apps when developing locally
 
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheManager(cache)
 
 
-<<<<<<< HEAD
-app = dash.Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],background_callback_manager=background_callback_manager)
-# app = DashProxy(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],background_callback_manager=background_callback_manager,transforms=[ServersideOutputTransform()])
-=======
 app = DashProxy(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],background_callback_manager=background_callback_manager, transforms=[ServersideOutputTransform()])
->>>>>>> 809fb8abb6ac18a69a6cd8ad9193f4d50495152e
 
 
 SIDEBAR_STYLE = {
