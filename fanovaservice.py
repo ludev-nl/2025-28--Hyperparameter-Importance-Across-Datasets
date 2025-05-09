@@ -178,7 +178,7 @@ def run_fanova(task_data: pd.DataFrame,
     task does not have at least min_runs runs, return None. Returns a dict
     with relative importance indexed by parameter name.
     """
-    if len(task_data) < min_runs:
+    if len(task_data) <= 0 or len(task_data) < min_runs:
         return None
 
     X = task_data.drop(columns=['value'])

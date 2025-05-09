@@ -151,7 +151,6 @@ def update_multi_options(search_value):
 @callback(
     Output("raw_configspace", 'data'),
     Output("raw_data_store", 'data'),
-    # Output('Fetch', 'n_clicks'),
     Input("Fetch", "n_clicks"),
     State("Flow-input", "value"),
     State("suite_dropdown", "value"),
@@ -167,7 +166,7 @@ def update_multi_options(search_value):
     progress=[Output("progress_open_ML", "value"), Output("progress_open_ML", "max")]
 )
 def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
-    if n_clicks is None or flow_id is None or suite_id is None:
+    if flow_id is None or suite_id is None:
         raise PreventUpdate
 
     tasks = fetcher.fetch_tasks(suite_id)
@@ -175,8 +174,8 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
     if tasks is None:
         raise PreventUpdate
 
-    # TODO: eventually all of them
-    # tasks = tasks[:10]
+    # TODO: eventually all of them, when done debugging
+    tasks = tasks[:10]
 
     set_progress(('0', str(len(tasks))))
 
@@ -184,7 +183,8 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
 
     i = 1
     for task in tasks:
-        task_data = fetcher.fetch_runs(flow_id, task)
+        # TODO: eventually all of them, when done debugging
+        task_data = fetcher.fetch_runs(flow_id, task, max_runs=200)
         set_progress((str(i), str(len(tasks))))
         i += 1
         if task_data is None:
@@ -197,10 +197,10 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
 
 @callback(
     Output("fanova_results", "data"),
-    Output('fanova', 'n_clicks'),
     Input("fanova", "n_clicks"),
-    State("raw_configspace", "data"),
-    State("raw_data_store", "data"),
+    State('raw_data_store', 'data'),
+    State("filtered_data", "data"),
+    State('min_runs', 'value'),
     prevent_initial_call=True,
     background=True,
     running=[
@@ -209,15 +209,16 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
         (Output("progress_fanova", "style"), {"visibility": "visible"}, {"visibility": "hidden"}),
         (Output("cancel_button2", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
     ],
-    progress=[Output("progress", "value"), Output("progress", "max")]
+    progress=[Output("progress_fanova", "value"), Output("progress_fanova", "max")]
 )
-def run_fanova(set_progress, n_clicks, cfg_space, data):
-    if n_clicks is None or cfg_space is None or data is None:
+def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs):
+    if raw_data is None and filtered_data is None:
         raise PreventUpdate
 
-    cfg_space = ConfigurationSpace.from_serialized_dict(cfg_space)
+    data = filtered_data if (filtered_data is not None and len(filtered_data) != 0) else raw_data
+    print(data)
+    cfg_space = fnvs.auto_configspace(data)
 
-    min_runs = 50
     # Finally we prepare to run fanova
     imputed_data, extended_cfg_space = fnvs.impute_data(data, cfg_space)
     processed_data = fnvs.prepare_data(imputed_data, extended_cfg_space)
@@ -235,26 +236,7 @@ def run_fanova(set_progress, n_clicks, cfg_space, data):
 
     set_progress(('0', '100'))
 
-    json_results = results.to_json()
-    return json_results, None
-
-
-#placeholder code for table
-table_header = [html.Thead(html.Tr([html.Th("Task ID"), html.Th("Original runs"), html.Th("Filtered runs")]))]
-
-row1 = html.Tr([html.Td("3"), html.Td("500"), html.Td("20")])
-row2 = html.Tr([html.Td("6"), html.Td("460"), html.Td("100")])
-row3 = html.Tr([html.Td("11"), html.Td("600"), html.Td("150")])
-
-table_body = [html.Tbody([row1, row2, row3])]
-
-table = dbc.Table(
-    table_header + table_body,
-    bordered=True,
-    hover=True,
-    responsive=True,
-    striped=True,
-    )
+    return results.to_json()
 
 
 config_content = html.Div([
@@ -278,17 +260,23 @@ config_content = html.Div([
                               html.Br(),
                               dbc.Row(id='range'),
                               html.Br(),
+                              html.Center(
+                                  dbc.Button(
+                                      'Filter',
+                                      id='filter_button',
+                                      outline = True,
+                                      size = "lg",
+                                      color="primary",
+                                      className="mb-4",
+                                  )
+                              ),
                               dbc.Row([
-                                            dbc.Col(
-                                                table,
-                                                width = {"size": 6, "offset": 3},
-                                            )
+                                            dash.dash_table.DataTable(id='filter_table')
                                       ]),
                               dcc.Store(id='filtered_config_int'),
                               dcc.Store(id='filtered_config_float'),
                               dcc.Store(id='filtered_config_cat'),
                               dcc.Store(id='filtered_config'),
-                              html.Div(id='config')
                           ])
 
 
@@ -298,7 +286,8 @@ config_content = html.Div([
     prevent_initial_call=True
 )
 def update_param_dropdown(raw_configspace):
-    return [param['name'] for param in raw_configspace['hyperparameters']]
+    return [param['name'] for param in raw_configspace['hyperparameters']
+            if param['type'] != 'constant']
 
 
 def transform_cfg_space(cfg):
@@ -451,21 +440,35 @@ def concat_filtered(filtered_config_int, filtered_config_float, filtered_config_
     return dict
 
 @callback(
-    Output(component_id='config', component_property='children'),
-    Input(component_id='filtered_config', component_property='data'),
+    Output(component_id='filtered_data', component_property='data'),
+    Output(component_id='filter_table', component_property='data'),
+    Input(component_id='filter_button', component_property='n_clicks'),
+    State(component_id='raw_data_store', component_property='data'),
+    State(component_id='filtered_config', component_property='data'),
     prevent_initial_call=True
 )
-def display_filtered(filtered_config):
-    return str(filtered_config)
+def filter_action(n_clicks, raw_data, filter_cfg):
+    if raw_data is None or len(raw_data) == 0 \
+            or filter_cfg is None or len(filter_cfg) == 0:
+        raise PreventUpdate
+
+    serialized = {'hyperparameters': filter_cfg.values()}
+    cfg_space = ConfigurationSpace.from_serialized_dict(serialized)
+
+    print(cfg_space)
+
+    filtered = fnvs.filter_data(raw_data, cfg_space)
+
+    display = [{'Task': id, 'Original runs': len(raw_data[id]), 'Filtered runs': len(filtered[id])}
+               for id in raw_data.keys()]
+
+    return Serverside(filtered), display
 
 layout = dbc.Container(
-    [       #datatype is a dictionary
+    [
         dcc.Store(id="raw_data_store", storage_type="session", data={}),
         dcc.Store(id="filtered_data", storage_type= "session", data={}),
-        #datatype is config space element, but that is initialised with None type
         dcc.Store(id="raw_configspace",storage_type= "session", data=None),
-        dcc.Store(id="filtered_configspace",storage_type= "session", data=None),
-         dcc.Store(id="fanova_results", storage_type="session", data=None),
         html.H1("Experiment Setup"),
         dcc.Markdown('''
                 1. Choose which flows and suites you want to include in the analysis. Click the fetch button to fetch them.

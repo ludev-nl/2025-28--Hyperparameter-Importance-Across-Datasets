@@ -10,9 +10,6 @@ from io import StringIO
 
 dash.register_page(__name__, path='/results_display')
 
-# # currently use two blank figures as placeholder
-# violinplot = go.Figure()
-# cdplot = 'data:image/png;base64,'
 
 @callback(
     Output("violin-plot", "figure"),
@@ -30,11 +27,11 @@ layout = dbc.Container([
                 dbc.Col([
                         html.H5('Violin Plot'),
                         dcc.Graph(id='violin-plot'),
-                ], width=6),
+                ], width=5),
                 dbc.Col([
                         html.H5('Critical Difference Plot'),
                         html.Img(id='critical-distance-plot'),
-                ], width=6)
+                ], width=5)
         ]),
         html.Div([
             html.Div('Download the csv files:'),
