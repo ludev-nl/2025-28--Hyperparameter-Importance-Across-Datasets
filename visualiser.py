@@ -43,8 +43,7 @@ def violinplot(fanova_results: pd.DataFrame,
     return fig
 
 
-def crit_diff_diagram(fanova_results: pd.DataFrame,
-                      show: bool) -> str:
+def crit_diff_diagram(fanova_results: pd.DataFrame) -> str:
     """Create a critical difference diagram of the data in
     fanova_results, and show the plot iff show == True.
     """

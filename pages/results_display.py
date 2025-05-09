@@ -12,15 +12,16 @@ dash.register_page(__name__, path='/results_display')
 
 # currently use two blank figures as placeholder
 violinplot = go.Figure()
-cdplot = go.Figure()
+cdplot = 'data:image/png;base64,'
 
 @callback(
+    [Output("violin-plot", "figure"),
+    Output("critical-distance-plot", "src")],
     Input("fanova_results", "data"),
-    Output("violin-plot", "figure")
 )
 def display_results(fanova_results):
     fanova_df = read_json(StringIO(fanova_results))
-    return vis.violinplot(fanova_df, False)
+    return vis.violinplot(fanova_df, False), vis.crit_diff_diagram(fanova_df)
 
 
 layout = dbc.Container([
@@ -32,7 +33,7 @@ layout = dbc.Container([
                 ], width=6),
                 dbc.Col([
                         html.H5('Critical Difference Plot'),
-                        dcc.Graph(figure=cdplot, id='cd-plot'),
+                        html.Img(id='critical-distance-plot'),
                 ], width=6)
         ]),
         html.Div([
