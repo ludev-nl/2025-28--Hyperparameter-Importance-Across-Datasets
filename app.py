@@ -56,12 +56,12 @@ app.layout = html.Div([
     #storage_type is used to specify how long the data is stored for.
     #session means that data is cleared after browser is closed
 
-    dcc.Store(id="raw_data_store", storage_type="session"),
-    dcc.Store(id="filtered_data", storage_type= "session"),
-    #datatype is config space element, but that is initialised with None type
-    dcc.Store(id="raw_configspace",storage_type= "session", data={}),
-    dcc.Store(id="filtered_configspace",storage_type= "session", data=None),
-    dcc.Store(id="fanova_results", storage_type="session", data=None),
+    # dcc.Store(id="raw_data_store", storage_type="session"),
+    # dcc.Store(id="filtered_data", storage_type= "session"),
+    # #datatype is config space element, but that is initialised with None type
+    # dcc.Store(id="raw_configspace",storage_type= "session", data={}),
+    # dcc.Store(id="filtered_configspace",storage_type= "session", data=None),
+
     dcc.Location(id="url"),
     sidebar,
     content

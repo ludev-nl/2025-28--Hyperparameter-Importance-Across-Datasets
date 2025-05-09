@@ -66,7 +66,7 @@ flow_content = html.Div([
                                         dbc.Col(
                                                 html.Div(
                                                     [
-                                                        dbc.Progress(id="progress_open_ML", value=0, striped=True, animated=True, className="mt-2",   style={'display':'none'})
+                                                        dbc.Progress(id="progress_open_ML", value=0, striped=True, animated=True, className="mt-2",  style={"visibility": "hidden"})
                                                     ]
                                                             ),
                                                         width={"size":9, "offset":1},
@@ -151,7 +151,7 @@ def update_multi_options(search_value):
 @callback(
     Output("raw_configspace", 'data'),
     Output("raw_data_store", 'data'),
-    Output('Fetch', 'n_clicks'),
+    # Output('Fetch', 'n_clicks'),
     Input("Fetch", "n_clicks"),
     State("Flow-input", "value"),
     State("suite_dropdown", "value"),
@@ -160,9 +160,9 @@ def update_multi_options(search_value):
     running=[
         (Output("Fetch", "disabled"), True, False),
         (Output("fanova", "disabled"), True, False),
-        (Output('progress_open_ML', 'color'), 'primary', 'success')
-        (Output("progress_open_ML", "style"), {"display": "block"}, {"display": "none"}),
-         (Output("cancel_button", "style"), {"display": "block"}, {"display": "none"})
+        (Output('progress_open_ML', 'color'), 'primary', 'success'),
+        (Output("progress_open_ML", "style"), {"visibility": "visible"}, {"visibility": "hidden"}),
+        (Output("cancel_button", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
     ],
     progress=[Output("progress_open_ML", "value"), Output("progress_open_ML", "max")]
 )
@@ -176,9 +176,10 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
         raise PreventUpdate
 
     # TODO: eventually all of them
-    tasks = tasks[:10]
+    # tasks = tasks[:10]
 
     set_progress(('0', str(len(tasks))))
+
     data = {}
 
     i = 1
@@ -191,8 +192,7 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
         data[task] = fetcher.coerce_types(task_data)
 
     return (fnvs.auto_configspace(data).to_serialized_dict(),
-            Serverside(data),
-            None)
+            Serverside(data))
 
 
 @callback(
@@ -205,7 +205,9 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
     background=True,
     running=[
         (Output("fanova", "disabled"), True, False),
-        (Output('progress', 'color'), 'primary', 'success')
+        (Output('progress', 'color'), 'primary', 'success'),
+        (Output("progress_fanova", "style"), {"visibility": "visible"}, {"visibility": "hidden"}),
+        (Output("cancel_button2", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
     ],
     progress=[Output("progress", "value"), Output("progress", "max")]
 )
@@ -463,6 +465,7 @@ layout = dbc.Container(
         #datatype is config space element, but that is initialised with None type
         dcc.Store(id="raw_configspace",storage_type= "session", data=None),
         dcc.Store(id="filtered_configspace",storage_type= "session", data=None),
+         dcc.Store(id="fanova_results", storage_type="session", data=None),
         html.H1("Experiment Setup"),
         dcc.Markdown('''
                 1. Choose which flows and suites you want to include in the analysis. Click the fetch button to fetch them.
@@ -492,7 +495,7 @@ layout = dbc.Container(
             dbc.Col(
                     html.Div(
                         [
-                            dbc.Progress(id="progress", value=0, striped=True, animated=True, className="mt-2")
+                            dbc.Progress(id="progress_fanova", value=0, striped=True, animated=True, className="mt-2", style={"visibility": "hidden"})
                         ]
                                 ),
                             width={"size":9, "offset":1},
@@ -503,10 +506,11 @@ layout = dbc.Container(
                         [
                         dbc.Button(
                         "Cancel",
-                        id="animation-toggle",
+                        id="cancel_button2",
                         className="mt-2",
                         color="danger",
                         outline=True,
+                        style={'visibility':'hidden'},
                         n_clicks=0),
                         ]
                             ),
