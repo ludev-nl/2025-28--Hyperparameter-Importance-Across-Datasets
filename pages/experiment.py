@@ -41,7 +41,7 @@ flow_content = html.Div([
                                     ]),
                             dbc.Row([
                                         dbc.Col(html.Div(
-                                                    dcc.Dropdown(id='Flow-input')
+                                                    dcc.Dropdown(id='Flow-input', persistence_type='session')
                                                 )),
                                     ]),
                             html.Br(),
@@ -50,7 +50,7 @@ flow_content = html.Div([
                                     ]),
                             dbc.Row([
                                         dbc.Col(html.Div(
-                                                    dcc.Dropdown(df_to_dict_list(fetcher.fetch_suites(), 'alias'), id='suite_dropdown')
+                                                    dcc.Dropdown(df_to_dict_list(fetcher.fetch_suites(), 'alias'), id='suite_dropdown', persistence_type='session')
                                                 )),
                                     ]),
 
@@ -216,7 +216,6 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs):
         raise PreventUpdate
 
     data = filtered_data if (filtered_data is not None and len(filtered_data) != 0) else raw_data
-    print(data)
     cfg_space = fnvs.auto_configspace(data)
 
     # Finally we prepare to run fanova
@@ -271,13 +270,33 @@ config_content = html.Div([
                                   )
                               ),
                               dbc.Row([
-                                            dash.dash_table.DataTable(id='filter_table')
+                                            dash.dash_table.DataTable(id='filter_table',
+                                                                      editable=False,
+                                                                      cell_selectable=False)
                                       ]),
-                              dcc.Store(id='filtered_config_int'),
-                              dcc.Store(id='filtered_config_float'),
-                              dcc.Store(id='filtered_config_cat'),
-                              dcc.Store(id='filtered_config'),
+                              dcc.Store(id='filtered_config_int', storage_type='session'),
+                              dcc.Store(id='filtered_config_float', storage_type='session'),
+                              dcc.Store(id='filtered_config_cat', storage_type='session'),
+                              dcc.Store(id='filtered_config', storage_type='session'),
                           ])
+
+
+@callback(
+    Output('filter_table', 'style_data_conditional'),
+    Input('min_runs', 'value'),
+    Input('filter_table', 'data'),
+    prevent_initial_call=True
+)
+def table_formatting(min_runs, data):
+    return [
+        {
+            'if': {
+                'filter_query': f'{{Filtered runs}} < {min_runs}',
+                'column_id': 'Filtered runs'
+            },
+            'backgroundColor': '#FF4136'
+        }
+    ]
 
 
 @callback(
@@ -443,19 +462,20 @@ def concat_filtered(filtered_config_int, filtered_config_float, filtered_config_
     Output(component_id='filtered_data', component_property='data'),
     Output(component_id='filter_table', component_property='data'),
     Input(component_id='filter_button', component_property='n_clicks'),
-    State(component_id='raw_data_store', component_property='data'),
+    Input(component_id='raw_data_store', component_property='data'),
     State(component_id='filtered_config', component_property='data'),
     prevent_initial_call=True
 )
 def filter_action(n_clicks, raw_data, filter_cfg):
-    if raw_data is None or len(raw_data) == 0 \
-            or filter_cfg is None or len(filter_cfg) == 0:
+    if raw_data is None or len(raw_data) == 0:
         raise PreventUpdate
+
+    if filter_cfg is None or len(filter_cfg) == 0:
+        return dash.no_update, [{'Task': id, 'Runs': len(raw_data[id])}
+                                for id in raw_data.keys()]
 
     serialized = {'hyperparameters': filter_cfg.values()}
     cfg_space = ConfigurationSpace.from_serialized_dict(serialized)
-
-    print(cfg_space)
 
     filtered = fnvs.filter_data(raw_data, cfg_space)
 
@@ -464,11 +484,12 @@ def filter_action(n_clicks, raw_data, filter_cfg):
 
     return Serverside(filtered), display
 
+
 layout = dbc.Container(
     [
-        dcc.Store(id="raw_data_store", storage_type="session", data={}),
-        dcc.Store(id="filtered_data", storage_type= "session", data={}),
-        dcc.Store(id="raw_configspace",storage_type= "session", data=None),
+        dcc.Store(id="raw_data_store", storage_type="session", data=None),
+        dcc.Store(id="filtered_data", storage_type= "session", data=None),
+        dcc.Store(id="raw_configspace", storage_type= "session", data=None),
         html.H1("Experiment Setup"),
         dcc.Markdown('''
                 1. Choose which flows and suites you want to include in the analysis. Click the fetch button to fetch them.

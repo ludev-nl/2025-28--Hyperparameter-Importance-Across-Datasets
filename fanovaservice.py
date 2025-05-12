@@ -16,6 +16,9 @@ def auto_configspace(data: dict[int, pd.DataFrame]) -> ConfigurationSpace:
     contain NA values, and parameters that are NA in all data will not
     appear in the configuration space at all.
     """
+    if len(data) == 0:
+        return ConfigurationSpace()
+
     full_data = pd.concat(data)
 
     param_dict: dict[str,
