@@ -131,23 +131,6 @@ def update_multi_options(search_value):
     return lst[:50]
 
 
-# # progress bar will show after callback
-# @app.callback(
-#     Output("progress", "value"),
-#     Output("progress-interval", "disabled"),
-#     Input("progress-interval", "n_intervals"),
-#     Input("animation-toggle", "n_clicks"),
-#     State("progress", "value"),
-# )
-# def update_progress(n_intervals, n_clicks, current_value):
-#     if n_clicks > 0:
-#         return 0, True
-
-#     new_value = min(current_value + 10, 100)
-#     return new_value, new_value >= 100
-
-
-
 @callback(
     Output("raw_configspace", 'data'),
     Output("raw_data_store", 'data'),
@@ -196,7 +179,16 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
 
 
 @callback(
-    Output("fanova_results", "data"),
+    Output('fanova', 'disabled'),
+    Input('raw_data_store', 'data'),
+    prevent_initial_call=False
+)
+def toggle_fanova_button(data):
+    return data is None
+
+
+@callback(
+    Output("fanova_results_local", "data"),
     Input("fanova", "n_clicks"),
     State('raw_data_store', 'data'),
     State("filtered_data", "data"),
@@ -485,11 +477,20 @@ def filter_action(n_clicks, raw_data, filter_cfg):
     return Serverside(filtered), display
 
 
+@callback(
+    Output('fanova_results', 'data'),
+    Input('fanova_results_local', 'data')
+)
+def update_global_results(data):
+    return data
+
+
 layout = dbc.Container(
     [
         dcc.Store(id="raw_data_store", storage_type="session", data=None),
         dcc.Store(id="filtered_data", storage_type= "session", data=None),
         dcc.Store(id="raw_configspace", storage_type= "session", data=None),
+        dcc.Store(id="fanova_results_local", storage_type= "session", data=None),
         html.H1("Experiment Setup"),
         dcc.Markdown('''
                 1. Choose which flows and suites you want to include in the analysis. Click the fetch button to fetch them.
