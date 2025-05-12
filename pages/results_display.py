@@ -25,13 +25,15 @@ layout = dbc.Container([
         html.H1('Here are the results:'),
         dbc.Row([
                 dbc.Col([
-                        html.H5('Violin Plot'),
+                        html.Center(html.H3('Violin Plot')),
                         dcc.Graph(id='violin-plot'),
-                ], width=5),
+                ], width={'offset':2, 'size':8}),
+        dbc.Row([
                 dbc.Col([
-                        html.H5('Critical Difference Plot'),
+                        html.Center(html.H3('Critical Difference Plot')),
                         html.Img(id='critical-distance-plot'),
-                ], width=5)
+                ], width={'offset':2, 'size':8})
+        ])
         ]),
         html.Div([
             html.Div('Download the csv files:'),
