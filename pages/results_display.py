@@ -8,7 +8,7 @@ import visualiser as vis
 from pandas import read_json
 from io import StringIO
 
-dash.register_page(__name__, path='/results_display')
+dash.register_page(__name__, path='/results')
 
 
 @callback(

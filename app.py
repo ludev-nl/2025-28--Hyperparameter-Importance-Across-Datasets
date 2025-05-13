@@ -1,18 +1,18 @@
 import dash
-from dash import Input, Output, dcc, html, DiskcacheManager
-import plotly.graph_objects as go
+from dash import DiskcacheManager
 import dash_bootstrap_components as dbc
-import pandas as pd
-import os
 import diskcache
-from dash_extensions.enrich import DashProxy, ServersideOutputTransform
-  # Diskcache for non-production apps when developing locally
+from dash_extensions.enrich import DashProxy, ServersideOutputTransform, Input, Output, dcc, html, Serverside, callback
+from openmlfetcher import fetch_flows
 
 cache = diskcache.Cache("./cache")
-background_callback_manager = DiskcacheManager(cache)
+background_callback_manager = DiskcacheManager(cache, cache_by=(lambda: 0), expire=3600)
 
-
-app = DashProxy(__name__, use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],background_callback_manager=background_callback_manager, transforms=[ServersideOutputTransform()])
+app = DashProxy(__name__,
+                use_pages=True,
+                external_stylesheets=[dbc.themes.BOOTSTRAP],
+                background_callback_manager=background_callback_manager,
+                transforms=[ServersideOutputTransform()])
 
 
 SIDEBAR_STYLE = {
@@ -22,12 +22,12 @@ SIDEBAR_STYLE = {
     "bottom": 0,
     "width": "16rem",
     "padding": "2rem 1rem",
-    "background-color": "#f8f9fa",
+    "backgroundColor": "#f8f9fa",
 }
 
 CONTENT_STYLE = {
-    "margin-left": "18rem",
-    "margin-right": "2rem",
+    "marginLeft": "18rem",
+    "marginRight": "2rem",
     "padding": "2rem 1rem",
 }
 
@@ -39,8 +39,8 @@ sidebar = html.Div(
         dbc.Nav(
             [
                 dbc.NavLink("Home", href="/", active="exact"),
-                dbc.NavLink("Experiment Management", href="/experiment", active="exact"),
-                dbc.NavLink("Results Display", href="/results_display", active="exact"),
+                dbc.NavLink("Experiment", href="/experiment", active="exact"),
+                dbc.NavLink("Results", href="/results", active="exact"),
             ],
             vertical=True,
             pills=True,
@@ -57,6 +57,7 @@ app.layout = html.Div([
     #session means that data is cleared after browser is closed
 
     dcc.Store(id="fanova_results", storage_type="session", data=None),
+    dcc.Store(id='flows', storage_type='session', data=None),
     dcc.Location(id="url"),
     sidebar,
     content
@@ -64,10 +65,17 @@ app.layout = html.Div([
 
     ])
 
-
-
-
-
+@callback(
+    Output('flows', 'data'),
+    Input('flows', 'id'),
+    background=True,
+    prevent_initial_call=False,
+    cache_args_to_ignore=[0]
+)
+def load_flows(id):
+    options_df = fetch_flows()
+    options_df['id_str'] = options_df.index.astype(str)
+    return Serverside(options_df)
 
 if __name__ == "__main__":
     app.run(port=8888)

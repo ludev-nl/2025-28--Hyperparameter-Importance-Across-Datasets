@@ -18,18 +18,11 @@ import fanovaservice as fnvs
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 dash.register_page(__name__, path='/experiment')
 
-
-#list of options for the flow selection dropdown bar
-options_df = fetcher.fetch_flows()
-options_df['id_str'] = options_df.index.astype(str)
 #convert the fetched data into the right format for the dropdown menu
 #returns a list of dictionaries
 def df_to_dict_list(df, col):
     return [dict(label=str(id) + '.' + row[col], value = id)
             for id, row in df.iterrows()]
-
-options = df_to_dict_list(options_df, 'full_name')
-
 
 flow_content = html.Div([
     # html.H1("This is the flow tab", className="mb-4"),
@@ -101,9 +94,11 @@ flow_content = html.Div([
 # Callback for the flow selection dropdown menu
 @callback(
     Output("Flow-input", "options"),
-    Input("Flow-input", "search_value")
+    Input("Flow-input", "search_value"),
+    State('flows', 'data'),
+    prevent_initial_call=True
 )
-def update_multi_options(search_value):
+def update_multi_options(search_value, flows):
     def mask (df: pd.DataFrame, token: str):
         if token.isnumeric():
             col = 'id_str'
@@ -112,13 +107,13 @@ def update_multi_options(search_value):
 
         return df[col].str.contains(token, case=False, regex=False)
 
-    if not search_value:
+    if not search_value or flows is None:
         raise PreventUpdate
 
     if len(search_value) < 3:
         return []
 
-    results = options_df
+    results = flows
     for token in split('[ .]', search_value):
         if len(token) < 3:
             continue
@@ -140,15 +135,14 @@ def update_multi_options(search_value):
     running=[
         (Output("Fetch", "disabled"), True, False),
         (Output("fanova", "disabled"), True, False),
-        (Output('progress_open_ML', 'color'), 'primary', 'success'),
         (Output("progress_open_ML", "style"), {"visibility": "visible"}, {"visibility": "hidden"}),
         (Output("cancel_button", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
     ],
-    progress=[Output("progress_open_ML", "value"), Output("progress_open_ML", "max")]
+    progress=[Output("progress_open_ML", "value"), Output("progress_open_ML", "max")],
+    progress_default=['0', '100'],
+    cache_args_to_ignore=[0] # Ignore the button clicks
 )
 def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
-    set_progress(('0', '100'))
-
     if flow_id is None or suite_id is None:
         raise PreventUpdate
 
@@ -199,11 +193,11 @@ def toggle_fanova_button(data):
         (Output("progress_fanova", "style"), {"visibility": "visible"}, {"visibility": "hidden"}),
         (Output("cancel_button2", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
     ],
-    progress=[Output("progress_fanova", "value"), Output("progress_fanova", "max")]
+    progress=[Output("progress_fanova", "value"), Output("progress_fanova", "max")],
+    progress_default=['0', '100'],
+    cache_args_to_ignore=[0] # Ignore the button clicks
 )
 def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs):
-    set_progress(('0', '100'))
-
     if raw_data is None and filtered_data is None:
         raise PreventUpdate
 
