@@ -3,10 +3,8 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter, Constant
 from dash_extensions.enrich import Input, Output, State, callback, dcc, html, Serverside
-from re import escape, split
+from re import split
 import pandas as pd
-
-# TODO: change paths/folder structure
 
 import sys
 import os
@@ -41,7 +39,9 @@ flow_content = html.Div([
                                     ]),
                             dbc.Row([
                                         dbc.Col(html.Div(
-                                                    dcc.Dropdown(id='Flow-input', persistence_type='session')
+                                                    dcc.Dropdown(id='Flow-input',
+                                                                 persistence=True,
+                                                                 persistence_type='session')
                                                 )),
                                     ]),
                             html.Br(),
@@ -50,7 +50,10 @@ flow_content = html.Div([
                                     ]),
                             dbc.Row([
                                         dbc.Col(html.Div(
-                                                    dcc.Dropdown(df_to_dict_list(fetcher.fetch_suites(), 'alias'), id='suite_dropdown', persistence_type='session')
+                                                    dcc.Dropdown(df_to_dict_list(fetcher.fetch_suites(), 'alias'),
+                                                                 id='suite_dropdown',
+                                                                 persistence=True,
+                                                                 persistence_type='session')
                                                 )),
                                     ]),
 
@@ -102,18 +105,14 @@ flow_content = html.Div([
     Input("Flow-input", "search_value")
 )
 def update_multi_options(search_value):
-
-    #prevents the program from searching the 100k entries from the start.
-    #Browser crashes if the search is done with less than 4 characters
-    #minimum lenght is added to make sure the program shows previously selected items
-    #rather than an empty seachbar
-
-    def mask (df, token):
+    def mask (df: pd.DataFrame, token: str):
         if token.isnumeric():
             col = 'id_str'
         else:
             col = 'full_name'
-        return df[col].str.contains(token)
+
+        # token = escape(token)
+        return df[col].str.contains(token, case=False, regex=False)
 
     if not search_value:
         raise PreventUpdate
@@ -121,9 +120,10 @@ def update_multi_options(search_value):
     if len(search_value) < 3:
         return []
 
-    search_value = escape(search_value)
     results = options_df
     for token in split('[ .]', search_value):
+        if len(token) < 3:
+            continue
         results = results[mask(results, token)]
 
     lst = df_to_dict_list(results, 'full_name')
@@ -149,6 +149,8 @@ def update_multi_options(search_value):
     progress=[Output("progress_open_ML", "value"), Output("progress_open_ML", "max")]
 )
 def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
+    set_progress(('0', '100'))
+
     if flow_id is None or suite_id is None:
         raise PreventUpdate
 
@@ -159,8 +161,6 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
 
     # TODO: eventually all of them, when done debugging
     tasks = tasks[:10]
-
-    set_progress(('0', str(len(tasks))))
 
     data = {}
 
@@ -204,6 +204,8 @@ def toggle_fanova_button(data):
     progress=[Output("progress_fanova", "value"), Output("progress_fanova", "max")]
 )
 def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs):
+    set_progress(('0', '100'))
+
     if raw_data is None and filtered_data is None:
         raise PreventUpdate
 
@@ -215,7 +217,6 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs):
     processed_data = fnvs.prepare_data(imputed_data, extended_cfg_space)
     # Running fanova takes quite long, so I split it per task
     results = {}
-    set_progress(('0', str(len(processed_data))))
     i = 0
     for task, task_data in processed_data.items():
         i += 1
@@ -224,8 +225,6 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs):
         if result:
             results[task] = result
     results = pd.DataFrame.from_dict(results, orient='index')
-
-    set_progress(('0', '100'))
 
     return results.to_json()
 
@@ -313,6 +312,9 @@ def transform_cfg_space(cfg):
     prevent_initial_call=True
 )
 def show_adequate_range(hyperparameter, filtered_config, raw_configspace):
+    if hyperparameter is None:
+        return None
+
     raw_configspace = transform_cfg_space(raw_configspace)
 
     if filtered_config is not None and hyperparameter in filtered_config.keys():
@@ -377,12 +379,15 @@ def show_adequate_range(hyperparameter, filtered_config, raw_configspace):
     Output(component_id='filtered_config_float', component_property='data'),
     Input(component_id='min_float_value', component_property='value'),
     Input(component_id='max_float_value', component_property='value'),
+    Input(component_id='raw_configspace', component_property='data'),
     State(component_id='hyperparameter_dd', component_property='value'),
     State(component_id='filtered_config_float', component_property='data'),
-    State(component_id='raw_configspace', component_property='data'),
     prevent_initial_call=True
 )
-def update_float_range_hyperparameter(min_float_value,max_float_value,hyperparameter,filtered_config_float,raw_configspace):
+def update_float_range_hyperparameter(min_float_value,max_float_value,raw_configspace,hyperparameter,filtered_config_float):
+    if dash.callback_context.triggered_id == 'raw_configspace':
+        return None
+
     raw_configspace = transform_cfg_space(raw_configspace)
 
     if filtered_config_float is None:
@@ -398,12 +403,15 @@ def update_float_range_hyperparameter(min_float_value,max_float_value,hyperparam
     Output(component_id='filtered_config_int', component_property='data'),
     Input(component_id='min_int_value', component_property='value'),
     Input(component_id='max_int_value', component_property='value'),
+    Input(component_id='raw_configspace', component_property='data'),
     State(component_id='hyperparameter_dd', component_property='value'),
     State(component_id='filtered_config_int', component_property='data'),
-    State(component_id='raw_configspace', component_property='data'),
     prevent_initial_call=True
 )
-def update_int_range_hyperparameter(min_int_value,max_int_value,hyperparameter,filtered_config_int,raw_configspace):
+def update_int_range_hyperparameter(min_int_value,max_int_value,raw_configspace,hyperparameter,filtered_config_int):
+    if dash.callback_context.triggered_id == 'raw_configspace':
+        return None
+
     raw_configspace = transform_cfg_space(raw_configspace)
 
     if filtered_config_int is None:
@@ -419,12 +427,15 @@ def update_int_range_hyperparameter(min_int_value,max_int_value,hyperparameter,f
 @callback(
     Output(component_id='filtered_config_cat', component_property='data'),
     Input(component_id='categories', component_property='value'),
+    Input(component_id='raw_configspace', component_property='data'),
     State(component_id='hyperparameter_dd', component_property='value'),
     State(component_id='filtered_config_cat', component_property='data'),
-    State(component_id='raw_configspace', component_property='data'),
     prevent_initial_call=True
 )
-def update_categorical_hyperparameter(categories,hyperparameter,filtered_config_cat, raw_configspace):
+def update_categorical_hyperparameter(categories, raw_configspace, hyperparameter, filtered_config_cat):
+    if dash.callback_context.triggered_id == 'raw_configspace':
+        return None
+
     raw_configspace = transform_cfg_space(raw_configspace)
 
     if filtered_config_cat is None:
@@ -460,11 +471,11 @@ def concat_filtered(filtered_config_int, filtered_config_float, filtered_config_
 )
 def filter_action(n_clicks, raw_data, filter_cfg):
     if raw_data is None or len(raw_data) == 0:
-        raise PreventUpdate
+        return None, None
 
-    if filter_cfg is None or len(filter_cfg) == 0:
-        return dash.no_update, [{'Task': id, 'Runs': len(raw_data[id])}
-                                for id in raw_data.keys()]
+    if dash.callback_context.triggered_id == 'raw_data_store':
+        return None, [{'Task': id, 'Runs': len(raw_data[id])}
+                      for id in raw_data.keys()]
 
     serialized = {'hyperparameters': filter_cfg.values()}
     cfg_space = ConfigurationSpace.from_serialized_dict(serialized)
