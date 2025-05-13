@@ -1,7 +1,7 @@
 import dash
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter, Constant
+from ConfigSpace import ConfigurationSpace
 from dash_extensions.enrich import Input, Output, State, callback, dcc, html, Serverside
 from re import split
 import pandas as pd
@@ -64,7 +64,6 @@ flow_content = html.Div([
                                 ]
                             ))),
 
-                            html.Br(),
                             dbc.Row([
                                         dbc.Col(
                                                 html.Div(
@@ -111,7 +110,6 @@ def update_multi_options(search_value):
         else:
             col = 'full_name'
 
-        # token = escape(token)
         return df[col].str.contains(token, case=False, regex=False)
 
     if not search_value:
@@ -261,9 +259,12 @@ config_content = html.Div([
                                   )
                               ),
                               dbc.Row([
-                                            dash.dash_table.DataTable(id='filter_table',
-                                                                      editable=False,
-                                                                      cell_selectable=False)
+                                            dbc.Col(dash.dash_table.DataTable(id='runs_table',
+                                                                              editable=False,
+                                                                              cell_selectable=False)),
+                                            dbc.Col(dash.dash_table.DataTable(id='nan_table',
+                                                                              editable=False,
+                                                                              cell_selectable=False)),
                                       ]),
                               dcc.Store(id='filtered_config_int', storage_type='session'),
                               dcc.Store(id='filtered_config_float', storage_type='session'),
@@ -273,9 +274,9 @@ config_content = html.Div([
 
 
 @callback(
-    Output('filter_table', 'style_data_conditional'),
+    Output('runs_table', 'style_data_conditional'),
     Input('min_runs', 'value'),
-    Input('filter_table', 'data'),
+    Input('runs_table', 'data'),
     prevent_initial_call=True
 )
 def table_formatting(min_runs, data):
@@ -463,29 +464,45 @@ def concat_filtered(filtered_config_int, filtered_config_float, filtered_config_
 
 @callback(
     Output(component_id='filtered_data', component_property='data'),
-    Output(component_id='filter_table', component_property='data'),
+    Output(component_id='runs_table', component_property='data'),
+    Output(component_id='nan_table', component_property='data'),
     Input(component_id='filter_button', component_property='n_clicks'),
     Input(component_id='raw_data_store', component_property='data'),
+    State(component_id='raw_configspace', component_property='data'),
     State(component_id='filtered_config', component_property='data'),
     prevent_initial_call=True
 )
-def filter_action(n_clicks, raw_data, filter_cfg):
+def filter_action(n_clicks, raw_data, raw_space, filter_cfg):
+    def nan_count(data, col):
+        counts = [df[col].isna().sum() for df in data.values()]
+        return sum(counts)
+
     if raw_data is None or len(raw_data) == 0:
-        return None, None
+        return None, None, None
 
     if dash.callback_context.triggered_id == 'raw_data_store':
-        return None, [{'Task': id, 'Runs': len(raw_data[id])}
-                      for id in raw_data.keys()]
+        return (None,
+                [{'Task': id, 'Runs': len(raw_data[id])}
+                 for id in raw_data.keys()],
+                [{'Hyperparameter': p['name'], 'Missing values': nan_count(raw_data, p['name'])}
+                 for p in raw_space['hyperparameters'] if p['type'] != 'constant'])
 
     serialized = {'hyperparameters': filter_cfg.values()}
-    cfg_space = ConfigurationSpace.from_serialized_dict(serialized)
+    filter_space = ConfigurationSpace.from_serialized_dict(serialized)
 
-    filtered = fnvs.filter_data(raw_data, cfg_space)
+    filtered = fnvs.filter_data(raw_data, filter_space)
 
-    display = [{'Task': id, 'Original runs': len(raw_data[id]), 'Filtered runs': len(filtered[id])}
-               for id in raw_data.keys()]
+    runs = [{'Task': id,
+             'Original runs': len(raw_data[id]),
+             'Filtered runs': len(filtered[id])}
+            for id in raw_data.keys()]
 
-    return Serverside(filtered), display
+    nans = [{'Hyperparameter': p['name'],
+             'Original missing values': nan_count(raw_data, p['name']),
+             'Filtered missing values': nan_count(filtered, p['name'])}
+            for p in raw_space['hyperparameters'] if p['type'] != 'constant']
+
+    return Serverside(filtered), runs, nans
 
 
 @callback(
@@ -516,6 +533,7 @@ layout = dbc.Container(
             id="tabs",
             active_tab="flow",
         ),
+        html.Hr(),
         html.Center(
             dbc.Button(
                 "Run Fanova",

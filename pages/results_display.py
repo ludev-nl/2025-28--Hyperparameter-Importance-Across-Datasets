@@ -22,7 +22,6 @@ def display_results(fanova_results):
 
 
 layout = dbc.Container([
-        html.H1('Here are the results:'),
         dbc.Row([
                 dbc.Col([
                         html.Center(html.H3('Violin Plot')),
@@ -36,7 +35,6 @@ layout = dbc.Container([
         ])
         ]),
         html.Div([
-            html.Div('Download the csv files:'),
                     dbc.Button(
                     'Export CSV',
                     color='primary',

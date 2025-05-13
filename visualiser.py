@@ -40,7 +40,8 @@ def violinplot(fanova_results: pd.DataFrame,
                                 box_visible=True,
                                 meanline_visible=True,
                                 spanmode='hard')
-                                # line_color=color_dict[hp]))
+                                # line_color=color_dict[hp])
+                                )
 
     fig.update_layout(yaxis_title="Variance Contribution",
                       xaxis_tickangle=-45)
