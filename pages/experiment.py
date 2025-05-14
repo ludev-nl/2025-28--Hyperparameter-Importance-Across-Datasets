@@ -53,7 +53,15 @@ flow_content = html.Div([
                             html.Br(),
                             dbc.Row(html.Center(html.Div(
                                 [
-                                    dbc.Button("Fetch", id= "Fetch", outline = True, size="lg", color = "primary", className="mb-4",disabled=False),
+                                    dbc.Button(
+                                        "Fetch", 
+                                        id= "Fetch", 
+                                        outline = True, 
+                                        size="lg", 
+                                        color = "primary", 
+                                        className="mb-4",
+                                        disabled=False
+                                        ),
                                 ]
                             ))),
 
