@@ -8,6 +8,8 @@ import pandas as pd
 
 import sys
 import os
+import io
+import zipfile
 
 # Add the utils directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'openmlfetcher')))
@@ -51,19 +53,32 @@ flow_content = html.Div([
                                     ]),
 
                             html.Br(),
-                            dbc.Row(html.Center(html.Div(
-                                [
-                                    dbc.Button(
-                                        "Fetch", 
-                                        id= "Fetch", 
-                                        outline = True, 
-                                        size="lg", 
-                                        color = "primary", 
-                                        className="mb-1",
-                                        disabled=False
-                                        ),
-                                ]
-                            ))),
+                            dbc.Row(
+                                dbc.Col(
+                                    html.Center(
+                                        html.Div([
+                                    dbc.Button("Fetch", 
+                                               id= "Fetch", 
+                                               outline = True, 
+                                               size="lg", 
+                                               color = "primary", 
+                                               className="mb-1",
+                                               disabled=False, 
+                                               style={"marginRight":"20px"}
+                                               ),
+                                    dbc.Button("Export csv", 
+                                               id="csv", 
+                                               outline = True, 
+                                               size="lg", 
+                                               color = "primary", 
+                                               className="mb-1",
+                                               disabled=False
+                                    ),
+                                    dcc.Download(id="download_raw_data")
+                                        ]),
+                                    )
+                                )
+                            ),
 
                             dbc.Row([
                                         dbc.Col(
@@ -143,6 +158,7 @@ def update_multi_options(search_value, flows):
     running=[
         (Output("Fetch", "disabled"), True, False),
         (Output("fanova", "disabled"), True, False),
+        (Output('progress_open_ML', 'color'), 'primary', 'success'),
         (Output("progress_open_ML", "style"), {"visibility": "visible"}, {"visibility": "hidden"}),
         (Output("cancel_button", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
     ],
@@ -177,7 +193,38 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
     return (fnvs.auto_configspace(data).to_serialized_dict(),
             Serverside(data))
 
+@callback(
+    Output("download_raw_data", 'data'),
+    Input("csv", "n_clicks"),
+    State('raw_data_store', 'data'),
+    State("Flow-input", "value"),
+    State("suite_dropdown", "value"),
+    prevent_initial_call=True,
+    background=True
+)
+def download_raw_data(n_clicks, raw_data, flow_id, suite_id):
+    if not raw_data:
+        raise PreventUpdate
+    
+    zip_buffer = io.BytesIO()
 
+    with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zip_file:
+        for task_id, task_data in raw_data.items():
+            if isinstance(task_data, dict):
+                dataframe = pd.DataFrame(task_data)
+            else:
+                dataframe = task_data
+
+            csv_buffer = io.StringIO()
+            dataframe.to_csv(csv_buffer, index=False)
+            csv_bytes = csv_buffer.getvalue().encode("utf-8")
+
+            zip_file.writestr(f"task_{task_id}.csv", csv_bytes)
+
+    zip_buffer.seek(0)
+    return dcc.send_bytes(zip_buffer.read(), filename=f"openml_f{flow_id}_s{suite_id}.zip")
+
+    
 @callback(
     Output('fanova', 'disabled'),
     Input('raw_data_store', 'data'),
@@ -543,7 +590,7 @@ layout = dbc.Container(
                 size = "lg",
                 color="primary",
                 id="fanova",
-                className="mb-1",
+                className="mb-4",
                 disabled = True
             ),
         ),
@@ -551,13 +598,7 @@ layout = dbc.Container(
             dbc.Col(
                     html.Div(
                         [
-                            dbc.Progress(
-                                id="progress_fanova", 
-                                value=0, 
-                                striped=True, 
-                                animated=True, 
-                                className="mt-1", 
-                                style={"visibility": "hidden"})
+                            dbc.Progress(id="progress_fanova", value=0, striped=True, animated=True, className="mt-2", style={"visibility": "hidden"})
                         ]
                                 ),
                             width={"size":9, "offset":1},
