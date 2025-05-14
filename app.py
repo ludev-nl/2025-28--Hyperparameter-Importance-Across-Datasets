@@ -9,19 +9,24 @@ from redis import StrictRedis
 import sys
 
 
-if 'deploy' in sys.argv or 'celery' in sys.argv[0]:
+debug = 'debug' in sys.argv
+deploy = ('gunicorn' in sys.argv[0]
+          or 'celery' in sys.argv[0])
+
+
+if deploy:
     redis_url = 'redis://localhost:6379/0'
     redis_inst = StrictRedis.from_url(redis_url)
 
     try:
         redis_inst.ping()
     except:
-        print('Make sure you have a Redis server running.')
+        sys.stderr.write('Make sure you have a Redis server running.')
         sys.exit()
 
     celery_app = Celery(__name__, backend=redis_url, broker=redis_url)
     manager = CeleryManager(celery_app, cache_by=(lambda: 0), expire=3600)
-    backend = RedisBackend(host="localhost", port=6379, db=0)
+    backend = RedisBackend(default_timeout=3600, host="localhost", port=6379, db=0)
 
     print('Run `celery -A app:celery_app worker --loglevel=INFO` in a separate window '
           + 'in this folder with your venv active before opening the webpage.')
@@ -100,8 +105,9 @@ def load_flows(id):
     options_df['id_str'] = options_df.index.astype(str)
     return Serverside(options_df)
 
-if 'deploy' in sys.argv or 'celery' in sys.argv[0]:
+if deploy:
     app.register_celery_tasks()
+    server = app.server
 
 if __name__ == "__main__":
     debug = 'debug' in sys.argv
