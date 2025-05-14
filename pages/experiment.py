@@ -59,7 +59,7 @@ flow_content = html.Div([
                                         outline = True, 
                                         size="lg", 
                                         color = "primary", 
-                                        className="mb-4",
+                                        className="mb-1",
                                         disabled=False
                                         ),
                                 ]
