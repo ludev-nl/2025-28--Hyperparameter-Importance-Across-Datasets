@@ -17,6 +17,9 @@ dash.register_page(__name__, path='/results')
     Input("fanova_results", "data"),
 )
 def display_results(fanova_results):
+    if fanova_results is None:
+        return None, None
+
     fanova_df = read_json(StringIO(fanova_results))
     return vis.violinplot(fanova_df, False), vis.crit_diff_diagram(fanova_df)
 

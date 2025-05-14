@@ -1,17 +1,22 @@
 import dash
-from dash import DiskcacheManager
+from dash import DiskcacheManager, CeleryManager
 import dash_bootstrap_components as dbc
 import diskcache
 from dash_extensions.enrich import DashProxy, ServersideOutputTransform, Input, Output, dcc, html, Serverside, callback
 from openmlfetcher import fetch_flows
+from celery import Celery
 
-cache = diskcache.Cache("./cache")
-background_callback_manager = DiskcacheManager(cache, cache_by=(lambda: 0), expire=3600)
+# cache = diskcache.Cache("./cache")
+# background_callback_manager = DiskcacheManager(cache, cache_by=(lambda: 0), expire=3600)
+
+redis_url = 'redis://localhost:6379/0'
+celery_app = Celery(__name__, backend=redis_url, broker=redis_url, include=['pages.experiment', 'pages.home', 'pages.results_display'])
+manager = CeleryManager(celery_app, cache_by=(lambda: 0), expire=3600)
 
 app = DashProxy(__name__,
                 use_pages=True,
                 external_stylesheets=[dbc.themes.BOOTSTRAP],
-                background_callback_manager=background_callback_manager,
+                background_callback_manager=manager,
                 transforms=[ServersideOutputTransform()])
 
 
@@ -76,6 +81,8 @@ def load_flows(id):
     options_df = fetch_flows()
     options_df['id_str'] = options_df.index.astype(str)
     return Serverside(options_df)
+
+app.register_celery_tasks()
 
 if __name__ == "__main__":
     app.run(port=8888)

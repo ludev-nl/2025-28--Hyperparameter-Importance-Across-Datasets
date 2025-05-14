@@ -95,7 +95,7 @@ flow_content = html.Div([
 @callback(
     Output("Flow-input", "options"),
     Input("Flow-input", "search_value"),
-    State('flows', 'data'),
+    Input('flows', 'data'),
     prevent_initial_call=True
 )
 def update_multi_options(search_value, flows):
