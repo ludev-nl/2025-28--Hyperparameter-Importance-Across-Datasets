@@ -543,7 +543,7 @@ layout = dbc.Container(
                 size = "lg",
                 color="primary",
                 id="fanova",
-                className="mb-4",
+                className="mb-1",
                 disabled = True
             ),
         ),
@@ -551,7 +551,13 @@ layout = dbc.Container(
             dbc.Col(
                     html.Div(
                         [
-                            dbc.Progress(id="progress_fanova", value=0, striped=True, animated=True, className="mt-2", style={"visibility": "hidden"})
+                            dbc.Progress(
+                                id="progress_fanova", 
+                                value=0, 
+                                striped=True, 
+                                animated=True, 
+                                className="mt-1", 
+                                style={"visibility": "hidden"})
                         ]
                                 ),
                             width={"size":9, "offset":1},
