@@ -2,22 +2,40 @@ import dash
 from dash import DiskcacheManager, CeleryManager
 import dash_bootstrap_components as dbc
 import diskcache
-from dash_extensions.enrich import DashProxy, ServersideOutputTransform, Input, Output, dcc, html, Serverside, callback
+from dash_extensions.enrich import DashProxy, ServersideOutputTransform, Input, Output, dcc, html, Serverside, callback, RedisBackend, FileSystemBackend
 from openmlfetcher import fetch_flows
 from celery import Celery
+from redis import StrictRedis
+import sys
 
-# cache = diskcache.Cache("./cache")
-# background_callback_manager = DiskcacheManager(cache, cache_by=(lambda: 0), expire=3600)
 
-redis_url = 'redis://localhost:6379/0'
-celery_app = Celery(__name__, backend=redis_url, broker=redis_url, include=['pages.experiment', 'pages.home', 'pages.results_display'])
-manager = CeleryManager(celery_app, cache_by=(lambda: 0), expire=3600)
+if 'deploy' in sys.argv or 'celery' in sys.argv[0]:
+    redis_url = 'redis://localhost:6379/0'
+    redis_inst = StrictRedis.from_url(redis_url)
+
+    try:
+        redis_inst.ping()
+    except:
+        print('Make sure you have a Redis server running.')
+        sys.exit()
+
+    celery_app = Celery(__name__, backend=redis_url, broker=redis_url)
+    manager = CeleryManager(celery_app, cache_by=(lambda: 0), expire=3600)
+    backend = RedisBackend(host="localhost", port=6379, db=0)
+
+    print('Run `celery -A app:celery_app worker --loglevel=INFO` in a separate window '
+          + 'in this folder with your venv active before opening the webpage.')
+else:
+    cache = diskcache.Cache("./cache")
+    manager = DiskcacheManager(cache, cache_by=(lambda: 0), expire=3600)
+    backend = FileSystemBackend()
+
 
 app = DashProxy(__name__,
                 use_pages=True,
                 external_stylesheets=[dbc.themes.BOOTSTRAP],
                 background_callback_manager=manager,
-                transforms=[ServersideOutputTransform()])
+                transforms=[ServersideOutputTransform([backend])])
 
 
 SIDEBAR_STYLE = {
@@ -82,9 +100,11 @@ def load_flows(id):
     options_df['id_str'] = options_df.index.astype(str)
     return Serverside(options_df)
 
-app.register_celery_tasks()
+if 'deploy' in sys.argv or 'celery' in sys.argv[0]:
+    app.register_celery_tasks()
 
 if __name__ == "__main__":
-    app.run(port=8888)
+    debug = 'debug' in sys.argv
+    app.run(port=8888, debug=debug)
 
 
