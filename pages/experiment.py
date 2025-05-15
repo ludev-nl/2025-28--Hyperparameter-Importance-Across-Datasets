@@ -170,8 +170,10 @@ def update_multi_options(search_value, flows, val):
         (Output("cancel_button", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
     ],
     progress=[Output("progress_open_ML", "value"), Output("progress_open_ML", "max")],
+    cancel=[Input("cancel_button","n_clicks")],
     progress_default=['0', '100'],
     cache_args_to_ignore=[0] # Ignore the button clicks
+
 )
 def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
     if flow_id is None or suite_id is None:
@@ -271,6 +273,7 @@ def toggle_buttons(data):
         (Output("cancel_button2", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
     ],
     progress=[Output("progress_fanova", "value"), Output("progress_fanova", "max")],
+    cancel=[Input("cancel_button2","n_clicks")],
     progress_default=['0', '100'],
     cache_args_to_ignore=[0] # Ignore the button clicks
 )
