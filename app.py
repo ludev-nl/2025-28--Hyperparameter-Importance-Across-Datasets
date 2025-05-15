@@ -27,9 +27,6 @@ if deploy:
     celery_app = Celery(__name__, backend=redis_url, broker=redis_url)
     manager = CeleryManager(celery_app, cache_by=(lambda: 0), expire=3600)
     backend = RedisBackend(default_timeout=3600, host="localhost", port=6379, db=0)
-
-    print('Run `celery -A app:celery_app worker --loglevel=INFO` in a separate window '
-          + 'in this folder with your venv active before opening the webpage.')
 else:
     cache = diskcache.Cache("./cache")
     manager = DiskcacheManager(cache, cache_by=(lambda: 0), expire=3600)
