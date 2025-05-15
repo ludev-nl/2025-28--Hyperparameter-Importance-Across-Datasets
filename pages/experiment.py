@@ -115,18 +115,19 @@ def update_multi_options(search_value, flows, val):
         else:
             return df_to_dict_list(flows.loc[[val]], 'full_name')
 
-    if len(search_value) < 3:
-        return []
-
     results = flows
+    valid_token = False
     for token in split('[ .]', search_value):
-        if len(token) < 3:
-            continue
-        results = results[mask(results, token)]
+        if len(token) >= 3:
+            results = results[mask(results, token)]
+            valid_token = True
+
+    if not valid_token:
+        return []
 
     lst = df_to_dict_list(results, 'full_name')
 
-    return lst[:50]
+    return lst[:100]
 
 
 @callback(
