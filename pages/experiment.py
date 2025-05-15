@@ -321,6 +321,19 @@ config_content = html.Div([
                                       ]),
                               html.Br(),
                               dbc.Row(id='range'),
+                              dcc.Store(id="log_scale_choice"),
+                              html.Br(),
+                              dbc.Row([
+                                  dbc.Col(
+                                      dcc.Checklist(
+                                          options=[{"label":"Use log scale","value":"log"}],
+                                          value=[],
+                                          id="log-scale-checkbox",
+                                          inline=True
+                                      ),
+                                      width={"size":6, "offset":3}
+                                  )
+                              ]),
                               html.Br(),
                               html.Center(
                                   dbc.Button(
@@ -647,3 +660,31 @@ layout = dbc.Container(
                             ]),
     ]
 )
+
+@callback(
+    Output("log_scale_choice", "data"),
+    Input("log-scale-checkbox", "value"),
+    prevent_initial_call=True
+)
+def store_log_checkbox(value):
+    return "log" in value  
+
+@callback(
+    Output("config-output", "children"),  
+    Input("min_float_value", "value"),
+    Input("max_float_value", "value"),
+    State("hyperparameter", "value"),
+    State("log_scale_choice", "data"),
+    prevent_initial_call=True
+)
+
+def build_hyperparameter_config(min_val, max_val, hyperparameter_name, log_checked):
+    config = {
+        hyperparameter_name: {
+            "type": "uniform_float",
+            "lower": float(min_val),
+            "upper": float(max_val),
+            "log": log_checked
+        }
+    }
+    return str(config)
