@@ -58,22 +58,22 @@ flow_content = html.Div([
                                 dbc.Col(
                                     html.Center(
                                         html.Div([
-                                    dbc.Button("Fetch", 
-                                               id= "Fetch", 
-                                               outline = True, 
-                                               size="lg", 
-                                               color = "primary", 
+                                    dbc.Button("Fetch",
+                                               id= "Fetch",
+                                               outline = True,
+                                               size="lg",
+                                               color = "primary",
                                                className="mb-1",
-                                               disabled=False, 
+                                               disabled=True,
                                                style={"marginRight":"20px"}
                                                ),
-                                    dbc.Button("Export csv", 
-                                               id="csv", 
-                                               outline = True, 
-                                               size="lg", 
-                                               color = "primary", 
+                                    dbc.Button("Export csv",
+                                               id="csv",
+                                               outline = True,
+                                               size="lg",
+                                               color = "primary",
                                                className="mb-1",
-                                               disabled=False
+                                               disabled=True
                                     ),
                                     dcc.Download(id="download_raw_data")
                                         ]),
@@ -164,6 +164,7 @@ def update_multi_options(search_value, flows, val):
     running=[
         (Output("Fetch", "disabled"), True, False),
         (Output("fanova", "disabled"), True, False),
+        (Output("csv", "disabled"), True, False),
         (Output('progress_open_ML', 'color'), 'primary', 'success'),
         (Output("progress_open_ML", "style"), {"visibility": "visible"}, {"visibility": "hidden"}),
         (Output("cancel_button", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
@@ -211,7 +212,7 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
 def download_raw_data(n_clicks, raw_data, flow_id, suite_id):
     if not raw_data:
         raise PreventUpdate
-    
+
     zip_buffer = io.BytesIO()
 
     with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zip_file:
@@ -230,14 +231,25 @@ def download_raw_data(n_clicks, raw_data, flow_id, suite_id):
     zip_buffer.seek(0)
     return dcc.send_bytes(zip_buffer.read(), filename=f"openml_f{flow_id}_s{suite_id}.zip")
 
-    
+
+@callback(
+    Output('Fetch', 'disabled'),
+    Input("Flow-input", "value"),
+    Input("suite_dropdown", "value"),
+    prevent_initial_call=False
+)
+def toggle_fetch_button(val1, val2):
+    return val1 is None or val2 is None
+
+
 @callback(
     Output('fanova', 'disabled'),
+    Output('csv', 'disabled'),
     Input('raw_data_store', 'data'),
     prevent_initial_call=False
 )
-def toggle_fanova_button(data):
-    return data is None
+def toggle_buttons(data):
+    return data is None, data is None
 
 
 @callback(

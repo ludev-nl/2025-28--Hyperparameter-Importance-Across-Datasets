@@ -41,15 +41,27 @@ layout = dbc.Container([
 
     html.Div([
         dbc.Button(
-            'Export CSV',
+            'Export csv',
+            disabled=True,
             color='primary',
             id='export_csv_button',
-            className='mb-3',
+            className='mb-1',
+            size='lg',
+            outline=True,
             style={"marginTop": "30px"}
         ),
         dcc.Download(id="download-fanovaresults-csv")
     ], className='text-center')
 ], fluid=True)
+
+
+@callback(
+    Output('export_csv_button', 'disabled'),
+    Input('fanova_results', 'data'),
+    prevent_initial_call=False
+)
+def toggle_download_button(data):
+    return data is None
 
 
 @callback(
@@ -61,6 +73,6 @@ layout = dbc.Container([
 def export_csv(n_clicks, fanova_results):
     if fanova_results is None:
         raise dash.exceptions.PreventUpdate
-    
+
     results_df = read_json(StringIO(fanova_results))
     return dcc.send_data_frame(results_df.to_csv, "fanova_results.csv", index=False)
