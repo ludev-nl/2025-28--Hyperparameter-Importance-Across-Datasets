@@ -25,24 +25,42 @@ def display_results(fanova_results):
 
 
 layout = dbc.Container([
-        dbc.Row([
-                dbc.Col([
-                        html.Center(html.H3('Violin Plot')),
-                        dcc.Graph(id='violin-plot'),
-                ], width={'offset':2, 'size':8}),
-        dbc.Row([
-                dbc.Col([
-                        html.Center(html.H3('Critical Difference Plot')),
-                        html.Img(id='critical-distance-plot'),
-                ], width={'offset':2, 'size':8})
-        ])
-        ]),
-        html.Div([
-                    dbc.Button(
-                    'Export CSV',
-                    color='primary',
-                    id='button',
-                    className='mb-3',
-                )
-        ], className='text-center')
+    dbc.Row([
+        dbc.Col([
+            html.Center(html.H3('Violin Plot', style={"marginBottom": "20px"})),
+            dcc.Graph(id='violin-plot'),
+        ], width={'offset': 2, 'size': 8})
+    ]),
+
+    dbc.Row([
+        dbc.Col([
+            html.Center(html.H3('Critical Difference Plot', style={"marginBottom": "20px"})),
+            html.Img(id='critical-distance-plot'),
+        ], width={'offset': 2, 'size': 8})
+    ]),
+
+    html.Div([
+        dbc.Button(
+            'Export CSV',
+            color='primary',
+            id='export_csv_button',
+            className='mb-3',
+            style={"marginTop": "30px"}
+        ),
+        dcc.Download(id="download-fanovaresults-csv")
+    ], className='text-center')
 ], fluid=True)
+
+
+@callback(
+    Output("download-fanovaresults-csv", "data"),
+    Input("export_csv_button", "n_clicks"),
+    State("fanova_results", "data"),
+    prevent_initial_call=True
+)
+def export_csv(n_clicks, fanova_results):
+    if fanova_results is None:
+        raise dash.exceptions.PreventUpdate
+    
+    results_df = read_json(StringIO(fanova_results))
+    return dcc.send_data_frame(results_df.to_csv, "fanova_results.csv", index=False)
