@@ -200,6 +200,10 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
     return (fnvs.auto_configspace(data).to_serialized_dict(),
             Serverside(data))
 
+# TODO: the user can change the selected flow and suite without fetching new
+# data. Then the downloaded data will be the previous flow/suite, but be named
+# after the currently selected ones. Perhaps we should put these IDs in a store
+# when we have fetched, and also use this data when exporting fanova results.
 @callback(
     Output("download_raw_data", 'data'),
     Input("csv", "n_clicks"),
