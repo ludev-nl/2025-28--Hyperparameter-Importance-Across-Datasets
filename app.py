@@ -1,11 +1,8 @@
 import dash
 from dash import DiskcacheManager, CeleryManager
 import dash_bootstrap_components as dbc
-import diskcache
 from dash_extensions.enrich import DashProxy, ServersideOutputTransform, Input, Output, dcc, html, Serverside, callback, RedisBackend, FileSystemBackend
 from openmlfetcher import fetch_flows
-from celery import Celery
-from redis import StrictRedis
 import sys
 
 
@@ -15,6 +12,9 @@ deploy = ('gunicorn' in sys.argv[0]
 
 
 if deploy:
+    from celery import Celery
+    from redis import StrictRedis
+
     redis_url = 'redis://localhost:6379/0'
     redis_inst = StrictRedis.from_url(redis_url)
 
@@ -28,7 +28,9 @@ if deploy:
     manager = CeleryManager(celery_app, cache_by=(lambda: 0), expire=3600)
     backend = RedisBackend(default_timeout=3600, host="localhost", port=6379, db=0)
 else:
-    cache = diskcache.Cache("./cache")
+    from diskcache import Cache
+
+    cache = Cache("./cache")
     manager = DiskcacheManager(cache, cache_by=(lambda: 0), expire=3600)
     backend = FileSystemBackend()
 
