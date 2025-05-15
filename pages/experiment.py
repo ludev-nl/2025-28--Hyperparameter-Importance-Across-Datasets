@@ -36,7 +36,8 @@ flow_content = html.Div([
                                         dbc.Col(html.Div(
                                                     dcc.Dropdown(id='Flow-input',
                                                                  persistence=True,
-                                                                 persistence_type='session')
+                                                                 persistence_type='session',
+                                                                 placeholder='Search tokens should be at least 3 characters...')
                                                 )),
                                     ]),
                             html.Br(),
@@ -118,10 +119,11 @@ flow_content = html.Div([
 @callback(
     Output("Flow-input", "options"),
     Input("Flow-input", "search_value"),
-    State('flows', 'data'),
-    prevent_initial_call=True
+    Input('flows', 'data'),
+    State('Flow-input', 'value'),
+    prevent_initial_call=False
 )
-def update_multi_options(search_value, flows):
+def update_multi_options(search_value, flows, val):
     def mask (df: pd.DataFrame, token: str):
         if token.isnumeric():
             col = 'id_str'
@@ -131,20 +133,24 @@ def update_multi_options(search_value, flows):
         return df[col].str.contains(token, case=False, regex=False)
 
     if not search_value or flows is None:
-        raise PreventUpdate
-
-    if len(search_value) < 3:
-        return []
+        if val is None or flows is None or val not in flows.index:
+            raise PreventUpdate
+        else:
+            return df_to_dict_list(flows.loc[[val]], 'full_name')
 
     results = flows
+    valid_token = False
     for token in split('[ .]', search_value):
-        if len(token) < 3:
-            continue
-        results = results[mask(results, token)]
+        if len(token) >= 3:
+            results = results[mask(results, token)]
+            valid_token = True
+
+    if not valid_token:
+        return []
 
     lst = df_to_dict_list(results, 'full_name')
 
-    return lst[:50]
+    return lst[:100]
 
 
 @callback(
