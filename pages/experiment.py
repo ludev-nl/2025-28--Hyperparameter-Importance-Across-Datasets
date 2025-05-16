@@ -279,6 +279,7 @@ def toggle_buttons(data):
     State("filtered_data", "data"),
     State('min_runs', 'value'),
     State('log_scale_choice', 'data'),
+    State('analysis_select', 'value'),
     prevent_initial_call=True,
     background=True,
     running=[
@@ -292,8 +293,8 @@ def toggle_buttons(data):
     progress_default=['0', '100'],
     cache_args_to_ignore=[0] # Ignore the button clicks
 )
-def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_data):
-    if raw_data is None and filtered_data is None:
+def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_data, param_selection):
+    if (raw_data is None and filtered_data is None) or len(param_selection) < 2:
         raise PreventUpdate
 
     data = filtered_data if (filtered_data is not None and len(filtered_data) != 0) else raw_data
@@ -306,7 +307,8 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_da
     for param in log_data.keys():
         if param in extended_cfg_space.keys():
             extended_cfg_space[param].log = log_data[param]
-    print(extended_cfg_space)
+
+    selected_space = ConfigurationSpace([extended_cfg_space[select] for select in param_selection])
 
     # Running fanova takes quite long, so I split it per task
     results = {}
@@ -314,7 +316,8 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_da
     for task, task_data in processed_data.items():
         i += 1
         set_progress((str(i), str(len(processed_data))))
-        result = fnvs.run_fanova(task_data, extended_cfg_space, min_runs)
+
+        result = fnvs.run_fanova(task_data[['value'] + param_selection], selected_space, min_runs)
         if result:
             results[task] = result
     results = pd.DataFrame.from_dict(results, orient='index')
@@ -369,11 +372,7 @@ config_content = html.Div([
                                                                                 'width' : '50%',
                                                                                 'height': '300px',
                                                                                 'overflowY': 'scroll'
-                                                                               }))),
-                              dcc.Store(id='filtered_config_int', storage_type='session'),
-                              dcc.Store(id='filtered_config_float', storage_type='session'),
-                              dcc.Store(id='filtered_config_cat', storage_type='session'),
-                              dcc.Store(id='filtered_config', storage_type='session'),
+                                                                               })))
                           ])
 
 
@@ -397,12 +396,14 @@ def table_formatting(min_runs, data):
 
 @callback(
     Output(component_id='hyperparameter_dd', component_property='options'),
+    Output('analysis_select', 'options'),
     Input(component_id='raw_configspace', component_property='data'),
     prevent_initial_call=True
 )
 def update_param_dropdown(raw_configspace):
-    return [param['name'] for param in raw_configspace['hyperparameters']
-            if param['type'] != 'constant']
+    choices = [param['name'] for param in raw_configspace['hyperparameters']
+               if param['type'] != 'constant']
+    return choices, choices
 
 
 def transform_cfg_space(cfg):
@@ -634,6 +635,61 @@ def update_global_results(data):
     return data
 
 
+fanova_content = html.Div([
+    dbc.Row([
+        dbc.Col(html.Div("Select which parameters to analyze:"))
+    ]),
+    dcc.Dropdown(
+        id='analysis_select',
+        persistence=True,
+        persistence_type='session',
+        multi=True
+    ),
+    html.Br(),
+    html.Center(
+        dbc.Button(
+            "Run Fanova",
+            outline = True,
+            size = "lg",
+            color="primary",
+            id="fanova",
+            className="mb-4",
+            disabled = True
+        ),
+    ),
+    dbc.Row([
+        dbc.Col(
+            html.Div([
+                    dbc.Progress(id="progress_fanova", value=0, striped=True, animated=True, className="mt-2", style={"visibility": "hidden"})
+            ]),
+            width={"size":9, "offset":1},
+            align="center"
+        ),
+        dbc.Col(
+            html.Div([
+                dbc.Button(
+                    "Cancel",
+                    id="cancel_button2",
+                    className="mt-2",
+                    color="danger",
+                    outline=True,
+                    style={'visibility':'hidden'},
+                    n_clicks=0),
+            ]),
+            width={"size":1}
+        )
+    ])
+])
+
+
+# @callback(
+#     Output('analysis_select', 'options'),
+#     Input('raw_configspace', 'data')
+# )
+# def update_analysis_options(cfg):
+
+
+
 layout = dbc.Container(
     [
         dcc.Store(id="raw_data_store", storage_type="session", data=None),
@@ -641,58 +697,25 @@ layout = dbc.Container(
         dcc.Store(id="raw_configspace", storage_type= "session", data=None),
         dcc.Store(id="fanova_results_local", storage_type= "session", data=None),
         dcc.Store(id="log_scale_choice", storage_type='session', data={}),
+        dcc.Store(id='filtered_config_int', storage_type='session'),
+        dcc.Store(id='filtered_config_float', storage_type='session'),
+        dcc.Store(id='filtered_config_cat', storage_type='session'),
+        dcc.Store(id='filtered_config', storage_type='session'),
         html.H1("Experiment Setup"),
         dcc.Markdown('''
                 1. Choose which flows and suites you want to include in the analysis. Click the fetch button to fetch them.
                 2. Filter your configuration space by selecting which hyperparameter configurations should be included. By default, all configurations are included.
-                3. Click the 'Run Fanova' button and wait for the results.
+                3. Select which parameters to analyze. Click the 'Run Fanova' button and wait for the results.
                 '''),
         dbc.Tabs(
             [
                 dbc.Tab(flow_content, label="Flow and Suite Selection", tab_id="flow"),
                 dbc.Tab(config_content, label="Configuration Space", tab_id="config"),
+                dbc.Tab(fanova_content, label="Run fANOVA", tab_id="fanova")
             ],
             id="tabs",
             active_tab="flow",
-        ),
-        html.Hr(),
-        html.Center(
-            dbc.Button(
-                "Run Fanova",
-                outline = True,
-                size = "lg",
-                color="primary",
-                id="fanova",
-                className="mb-4",
-                disabled = True
-            ),
-        ),
-        dbc.Row([
-            dbc.Col(
-                    html.Div(
-                        [
-                            dbc.Progress(id="progress_fanova", value=0, striped=True, animated=True, className="mt-2", style={"visibility": "hidden"})
-                        ]
-                                ),
-                            width={"size":9, "offset":1},
-                            align="center"
-                    ),
-            dbc.Col(
-                    html.Div(
-                        [
-                        dbc.Button(
-                        "Cancel",
-                        id="cancel_button2",
-                        className="mt-2",
-                        color="danger",
-                        outline=True,
-                        style={'visibility':'hidden'},
-                        n_clicks=0),
-                        ]
-                            ),
-                        width={"size":1}
-                    )
-                            ]),
+        )
     ]
 )
 

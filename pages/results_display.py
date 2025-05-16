@@ -21,7 +21,11 @@ def display_results(fanova_results):
         return None, None
 
     fanova_df = read_json(StringIO(fanova_results))
-    return vis.violinplot(fanova_df, False), vis.crit_diff_diagram(fanova_df)
+
+    violin = vis.violinplot(fanova_df, False)
+    crit_diff = vis.crit_diff_diagram(fanova_df) if len(fanova_df.columns) > 2 else None
+
+    return violin, crit_diff
 
 
 layout = dbc.Container([
