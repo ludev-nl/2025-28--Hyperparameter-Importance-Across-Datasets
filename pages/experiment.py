@@ -264,6 +264,7 @@ def toggle_buttons(data):
     State('raw_data_store', 'data'),
     State("filtered_data", "data"),
     State('min_runs', 'value'),
+    State('log_scale_choice', 'data'),
     prevent_initial_call=True,
     background=True,
     running=[
@@ -277,7 +278,7 @@ def toggle_buttons(data):
     progress_default=['0', '100'],
     cache_args_to_ignore=[0] # Ignore the button clicks
 )
-def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs):
+def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_data):
     if raw_data is None and filtered_data is None:
         raise PreventUpdate
 
@@ -287,6 +288,12 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs):
     # Finally we prepare to run fanova
     imputed_data, extended_cfg_space = fnvs.impute_data(data, cfg_space)
     processed_data = fnvs.prepare_data(imputed_data, extended_cfg_space)
+
+    for param in log_data.keys():
+        if param in extended_cfg_space.keys():
+            extended_cfg_space[param].log = log_data[param]
+    print(extended_cfg_space)
+
     # Running fanova takes quite long, so I split it per task
     results = {}
     i = 0
@@ -321,19 +328,6 @@ config_content = html.Div([
                                       ]),
                               html.Br(),
                               dbc.Row(id='range'),
-                              dcc.Store(id="log_scale_choice"),
-                              html.Br(),
-                              dbc.Row([
-                                  dbc.Col(
-                                      dcc.Checklist(
-                                          options=[{"label":"Use log scale","value":"log"}],
-                                          value=[],
-                                          id="log-scale-checkbox",
-                                          inline=True
-                                      ),
-                                      width={"size":6, "offset":3}
-                                  )
-                              ]),
                               html.Br(),
                               html.Center(
                                   dbc.Button(
@@ -430,6 +424,15 @@ def show_adequate_range(hyperparameter, filtered_config, raw_configspace):
                               pattern=r"([+-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+))"),
                     width=2
                 ),
+        dbc.Col(
+                    dcc.Checklist(
+                        options=[{"label":"Use log scale","value":"log"}],
+                        value=[],
+                        id="log-scale-checkbox",
+                        inline=True,
+                    ),
+                    width={"size":6, "offset":3}
+                )
         )
     elif hyperparameter_value['type'] == 'uniform_int':
         return(
@@ -484,7 +487,11 @@ def update_float_range_hyperparameter(min_float_value,max_float_value,raw_config
         if hyperparameter in filtered_config_float.keys():
             del filtered_config_float[hyperparameter]
         return filtered_config_float
-    filtered_config_float[hyperparameter] = {'type': 'uniform_float', 'name': raw_configspace[hyperparameter]['name'], 'lower': float(min_float_value), 'upper': float(max_float_value)}
+    filtered_config_float[hyperparameter] = {'type': 'uniform_float',
+                                             'name': raw_configspace[hyperparameter]['name'],
+                                             'lower': float(min_float_value),
+                                             'upper': float(max_float_value)}
+
     return filtered_config_float
 
 @callback(
@@ -606,6 +613,7 @@ layout = dbc.Container(
         dcc.Store(id="filtered_data", storage_type= "session", data=None),
         dcc.Store(id="raw_configspace", storage_type= "session", data=None),
         dcc.Store(id="fanova_results_local", storage_type= "session", data=None),
+        dcc.Store(id="log_scale_choice", storage_type='session', data={}),
         html.H1("Experiment Setup"),
         dcc.Markdown('''
                 1. Choose which flows and suites you want to include in the analysis. Click the fetch button to fetch them.
@@ -664,27 +672,38 @@ layout = dbc.Container(
 @callback(
     Output("log_scale_choice", "data"),
     Input("log-scale-checkbox", "value"),
-    prevent_initial_call=True
-)
-def store_log_checkbox(value):
-    return "log" in value  
-
-@callback(
-    Output("config-output", "children"),  
-    Input("min_float_value", "value"),
-    Input("max_float_value", "value"),
-    State("hyperparameter", "value"),
+    Input('raw_configspace', 'data'),
+    State(component_id='hyperparameter_dd', component_property='value'),
     State("log_scale_choice", "data"),
     prevent_initial_call=True
 )
+def store_log_checkbox(value, cfg_space, param, log_data):
+    if dash.callback_context.triggered_id == 'raw_configspace':
+        return {}
 
-def build_hyperparameter_config(min_val, max_val, hyperparameter_name, log_checked):
-    config = {
-        hyperparameter_name: {
-            "type": "uniform_float",
-            "lower": float(min_val),
-            "upper": float(max_val),
-            "log": log_checked
-        }
-    }
-    return str(config)
+    if value is None or param is None:
+        raise PreventUpdate
+
+    log_data[param] = "log" in value
+
+    return log_data
+
+# @callback(
+#     Output("config-output", "children"),
+#     Input("min_float_value", "value"),
+#     Input("max_float_value", "value"),
+#     State("hyperparameter", "value"),
+#     State("log_scale_choice", "data"),
+#     prevent_initial_call=True
+# )
+# def build_hyperparameter_config(min_val, max_val, hyperparameter_name, log_checked):
+#     config = {
+#         hyperparameter_name: {
+#             "type": "uniform_float",
+#             "lower": float(min_val),
+#             "upper": float(max_val),
+#             "log": log_checked
+#         }
+#     }
+
+#     return str(config)
