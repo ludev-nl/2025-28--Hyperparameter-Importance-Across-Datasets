@@ -54,14 +54,13 @@ flow_content = html.Div([
                                     ]),
                             html.Br(),
                             dbc.Row([
-                                dbc.Col(html.Div("Max runs per task:"), width=3),
+                                dbc.Col(html.Div("Maximum runs per task:"), width=3),
                                 dbc.Col(
                                     dbc.Input(
                                         id="max_runs_per_task",
                                         type="number",
-                                        # value=200,
                                         min=1,
-                                        placeholder="e.g., 200",
+                                        placeholder="No limit",
                                         persistence=True,
                                         persistence_type='session'
                                     ),
@@ -169,9 +168,18 @@ def update_multi_options(search_value, flows, val):
 
 
 @callback(
+    Output('fetched_ids', 'data'),
+    Input('fetched_ids_local', 'data'),
+    prevent_initial_call=True
+)
+def propagate_ids(data):
+    return data
+
+
+@callback(
     Output("raw_configspace", 'data'),
     Output("raw_data_store", 'data'),
-    Output("fetched_ids", "data"),
+    Output("fetched_ids_local", "data"),
     Input("Fetch", "n_clicks"),
     State("Flow-input", "value"),
     State("suite_dropdown", "value"),
@@ -180,9 +188,9 @@ def update_multi_options(search_value, flows, val):
     background=True,
     running=[
         (Output("Fetch", "disabled"), True, False),
-        (Output("fanova", "disabled"), True, False),
+        # (Output("fanova", "disabled"), True, False),
         (Output("csv", "disabled"), True, False),
-        (Output('progress_open_ML', 'color'), 'primary', 'success'),
+        # (Output('progress_open_ML', 'color'), 'primary', 'success'),
         (Output("progress_open_ML", "style"), {"visibility": "visible"}, {"visibility": "hidden"}),
         (Output("cancel_button", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
     ],
@@ -206,11 +214,12 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
 
     data = {}
 
-    i = 1
+    i = 0
     for task in tasks:
-        task_data = fetcher.fetch_runs(flow_id, task, max_runs=max_runs)
-        set_progress((str(i), str(len(tasks))))
         i += 1
+        set_progress((str(i), str(len(tasks))))
+        task_data = fetcher.fetch_runs(flow_id, task, max_runs=max_runs)
+
         if task_data is None:
             continue
         data[task] = fetcher.coerce_types(task_data)
@@ -292,7 +301,7 @@ def toggle_buttons(data):
     background=True,
     running=[
         (Output("fanova", "disabled"), True, False),
-        (Output('progress', 'color'), 'primary', 'success'),
+        # (Output('progress_fanova', 'color'), 'primary', 'success'),
         (Output("progress_fanova", "style"), {"visibility": "visible"}, {"visibility": "hidden"}),
         (Output("cancel_button2", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
     ],
@@ -705,18 +714,11 @@ fanova_content = html.Div([
 ])
 
 
-# @callback(
-#     Output('analysis_select', 'options'),
-#     Input('raw_configspace', 'data')
-# )
-# def update_analysis_options(cfg):
-
-
 
 layout = dbc.Container(
     [
         dcc.Store(id="raw_data_store", storage_type="session", data=None),
-        # dcc.Store(id="fetched_ids", storage_type="session", data=None),
+        dcc.Store(id="fetched_ids_local", storage_type="session", data=None),
         dcc.Store(id="filtered_data", storage_type= "session", data=None),
         dcc.Store(id="raw_configspace", storage_type= "session", data=None),
         dcc.Store(id="fanova_results_local", storage_type= "session", data=None),
