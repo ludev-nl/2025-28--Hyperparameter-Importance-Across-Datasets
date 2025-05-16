@@ -25,7 +25,13 @@ if deploy:
         sys.exit()
 
     celery_app = Celery(__name__, backend=redis_url, broker=redis_url)
+    # TODO: this is a refresh-on-hit expiry. Instead configure the redis backend.
+    # Is it enough that we configure it for the backend (which is a RedisCache instance)?
+    # This here is a celery.backends.redis.RedisBackend
     manager = CeleryManager(celery_app, cache_by=(lambda: 0), expire=3600)
+    # TODO: this is an absolute time-out. This might be a problem if the background
+    # callback caching caches the Serverside keys, and those keys might persist
+    # longer than the data they represent
     backend = RedisBackend(default_timeout=3600, host="localhost", port=6379, db=0)
 else:
     from diskcache import Cache
