@@ -52,7 +52,20 @@ flow_content = html.Div([
                                                                  persistence_type='session')
                                                 )),
                                     ]),
-
+                            html.Br(),
+                            dbc.Row([
+                                dbc.Col(html.Div("Max runs per task:"), width=3),
+                                dbc.Col(
+                                    dbc.Input(
+                                        id="max_runs_per_task",
+                                        type="number",
+                                        # value=200,
+                                        min=1,
+                                        placeholder="e.g., 200"
+                                    ),
+                                    width=3,
+                                )
+                            ], justify="center"),
                             html.Br(),
                             dbc.Row(
                                 dbc.Col(
@@ -159,6 +172,7 @@ def update_multi_options(search_value, flows, val):
     Input("Fetch", "n_clicks"),
     State("Flow-input", "value"),
     State("suite_dropdown", "value"),
+    State("max_runs_per_task", "value"),
     prevent_initial_call=True,
     background=True,
     running=[
@@ -175,10 +189,10 @@ def update_multi_options(search_value, flows, val):
     cache_args_to_ignore=[0] # Ignore the button clicks
 
 )
-def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
+def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
     if flow_id is None or suite_id is None:
         raise PreventUpdate
-
+    print(max_runs)
     tasks = fetcher.fetch_tasks(suite_id)
 
     if tasks is None:
@@ -192,7 +206,7 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id):
     i = 1
     for task in tasks:
         # TODO: eventually all of them, when done debugging
-        task_data = fetcher.fetch_runs(flow_id, task, max_runs=200)
+        task_data = fetcher.fetch_runs(flow_id, task, max_runs=max_runs)
         set_progress((str(i), str(len(tasks))))
         i += 1
         if task_data is None:
@@ -311,13 +325,13 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_da
 config_content = html.Div([
                               html.Br(),
                               dbc.Row([
-                                          dbc.Col(html.Div("Minimal runs:")),
-                                          dbc.Col(
-                                                      dbc.Input(
-                                                        type="number",id="min_runs",value=0
-                                                    )
-                                                )
-                                      ]),
+                                  dbc.Col(html.Div("Minimal runs:")),
+                                  dbc.Col(
+                                      dbc.Input(
+                                          type="number",id="min_runs",value=0
+                                          )
+                                  )
+                              ]),
                               html.Br(),
                               dbc.Row(html.Center(html.Div("Choose hyperparameter configuration space:"))),
                               html.Br(),
