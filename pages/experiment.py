@@ -61,7 +61,9 @@ flow_content = html.Div([
                                         type="number",
                                         # value=200,
                                         min=1,
-                                        placeholder="e.g., 200"
+                                        placeholder="e.g., 200",
+                                        persistence=True,
+                                        persistence_type='session'
                                     ),
                                     width=3,
                                 )
@@ -193,7 +195,7 @@ def update_multi_options(search_value, flows, val):
 def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
     if flow_id is None or suite_id is None:
         raise PreventUpdate
-    print(max_runs)
+
     tasks = fetcher.fetch_tasks(suite_id)
 
     if tasks is None:
@@ -206,7 +208,6 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
 
     i = 1
     for task in tasks:
-        # TODO: eventually all of them, when done debugging
         task_data = fetcher.fetch_runs(flow_id, task, max_runs=max_runs)
         set_progress((str(i), str(len(tasks))))
         i += 1
@@ -236,7 +237,7 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
 def download_raw_data(n_clicks, raw_data, fetched_ids):
     if not raw_data:
         raise PreventUpdate
-    
+
     flow_id = fetched_ids["flow_id"]
     suite_id = fetched_ids["suite_id"]
 
@@ -338,8 +339,12 @@ config_content = html.Div([
                                   dbc.Col(html.Div("Minimal runs:")),
                                   dbc.Col(
                                       dbc.Input(
-                                          type="number",id="min_runs",value=0
-                                          )
+                                          type="number",
+                                          id="min_runs",
+                                          value=0,
+                                          persistence=True,
+                                          persistence_type='session'
+                                      )
                                   )
                               ]),
                               html.Br(),
@@ -366,14 +371,20 @@ config_content = html.Div([
                               dbc.Row([
                                             dbc.Col(dash.dash_table.DataTable(id='runs_table',
                                                                               editable=False,
-                                                                              cell_selectable=False)),
+                                                                              cell_selectable=False,
+                                                                              persistence=True,
+                                                                              persistence_type='session')),
                                             dbc.Col(dash.dash_table.DataTable(id='nan_table',
                                                                               editable=False,
-                                                                              cell_selectable=False)),
+                                                                              cell_selectable=False,
+                                                                              persistence=True,
+                                                                              persistence_type='session')),
                                                                             ]),
                               dbc.Row(dbc.Col(dash.dash_table.DataTable(id='const_table',
                                                                               editable=False,
                                                                               cell_selectable=False,
+                                                                              persistence=True,
+                                                                              persistence_type='session',
                                                                               style_table={
                                                                                 'margin-top': '10px',
                                                                                 'width' : '50%',
@@ -422,9 +433,10 @@ def transform_cfg_space(cfg):
     Input(component_id='hyperparameter_dd', component_property='value'),
     State(component_id='filtered_config', component_property='data'),
     State(component_id='raw_configspace', component_property='data'),
+    State('log_scale_choice', 'data'),
     prevent_initial_call=True
 )
-def show_adequate_range(hyperparameter, filtered_config, raw_configspace):
+def show_adequate_range(hyperparameter, filtered_config, raw_configspace, log_data):
     if hyperparameter is None:
         return None
 
@@ -434,6 +446,8 @@ def show_adequate_range(hyperparameter, filtered_config, raw_configspace):
         hyperparameter_value = filtered_config[hyperparameter]
     else:
         hyperparameter_value = raw_configspace[hyperparameter]
+
+    log = log_data[hyperparameter] if hyperparameter in log_data.keys() else False
 
     if hyperparameter_value['type'] == 'uniform_float':
         return(
@@ -458,7 +472,7 @@ def show_adequate_range(hyperparameter, filtered_config, raw_configspace):
         dbc.Col(
                     dcc.Checklist(
                         options=[{"label":"Use log scale","value":"log"}],
-                        value=[],
+                        value=['log'] if log else [],
                         id="log-scale-checkbox",
                         inline=True,
                     ),
@@ -593,12 +607,13 @@ def concat_filtered(filtered_config_int, filtered_config_float, filtered_config_
     Output(component_id='nan_table', component_property='data'),
     Output(component_id='const_table', component_property='data'),
     Input(component_id='filter_button', component_property='n_clicks'),
-    Input(component_id='raw_data_store', component_property='data'),
+    Input(component_id='fetched_ids', component_property='modified_timestamp'),
+    State(component_id='raw_data_store', component_property='data'),
     State(component_id='raw_configspace', component_property='data'),
     State(component_id='filtered_config', component_property='data'),
-    prevent_initial_call=True
+    prevent_initial_call=False
 )
-def filter_action(n_clicks, raw_data, raw_space, filter_cfg):
+def filter_action(n_clicks, ids, raw_data, raw_space, filter_cfg):
     def nan_count(data, col):
         counts = [df[col].isna().sum() for df in data.values()]
         return sum(counts)
@@ -606,7 +621,7 @@ def filter_action(n_clicks, raw_data, raw_space, filter_cfg):
     if raw_data is None or len(raw_data) == 0:
         return None, None, None, None
 
-    if dash.callback_context.triggered_id == 'raw_data_store':
+    if dash.callback_context.triggered_id == 'fetched_ids' or filter_cfg is None:
         return (None,
                 [{'Task': id, 'Runs': len(raw_data[id])}
                  for id in raw_data.keys()],
@@ -643,6 +658,7 @@ def update_global_results(data):
 
 
 fanova_content = html.Div([
+    html.Br(),
     dbc.Row([
         dbc.Col(html.Div("Select which parameters to analyze:"))
     ]),
@@ -745,23 +761,3 @@ def store_log_checkbox(value, cfg_space, param, log_data):
     log_data[param] = "log" in value
 
     return log_data
-
-# @callback(
-#     Output("config-output", "children"),
-#     Input("min_float_value", "value"),
-#     Input("max_float_value", "value"),
-#     State("hyperparameter", "value"),
-#     State("log_scale_choice", "data"),
-#     prevent_initial_call=True
-# )
-# def build_hyperparameter_config(min_val, max_val, hyperparameter_name, log_checked):
-#     config = {
-#         hyperparameter_name: {
-#             "type": "uniform_float",
-#             "lower": float(min_val),
-#             "upper": float(max_val),
-#             "log": log_checked
-#         }
-#     }
-
-#     return str(config)
