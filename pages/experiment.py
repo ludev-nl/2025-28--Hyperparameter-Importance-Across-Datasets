@@ -169,6 +169,7 @@ def update_multi_options(search_value, flows, val):
 @callback(
     Output("raw_configspace", 'data'),
     Output("raw_data_store", 'data'),
+    Output("fetched_ids", "data"),
     Input("Fetch", "n_clicks"),
     State("Flow-input", "value"),
     State("suite_dropdown", "value"),
@@ -214,7 +215,9 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
         data[task] = fetcher.coerce_types(task_data)
 
     return (fnvs.auto_configspace(data).to_serialized_dict(),
-            Serverside(data))
+            Serverside(data),
+            {"flow_id": flow_id, "suite_id": suite_id}
+    )
 
 # TODO: the user can change the selected flow and suite without fetching new
 # data. Then the downloaded data will be the previous flow/suite, but be named
@@ -224,14 +227,18 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
     Output("download_raw_data", 'data'),
     Input("csv", "n_clicks"),
     State('raw_data_store', 'data'),
-    State("Flow-input", "value"),
-    State("suite_dropdown", "value"),
+    # State("Flow-input", "value"),
+    # State("suite_dropdown", "value"),
+    State("fetched_ids", "data"),
     prevent_initial_call=True,
     background=True
 )
-def download_raw_data(n_clicks, raw_data, flow_id, suite_id):
+def download_raw_data(n_clicks, raw_data, fetched_ids):
     if not raw_data:
         raise PreventUpdate
+    
+    flow_id = fetched_ids["flow_id"]
+    suite_id = fetched_ids["suite_id"]
 
     zip_buffer = io.BytesIO()
 
@@ -693,6 +700,7 @@ fanova_content = html.Div([
 layout = dbc.Container(
     [
         dcc.Store(id="raw_data_store", storage_type="session", data=None),
+        # dcc.Store(id="fetched_ids", storage_type="session", data=None),
         dcc.Store(id="filtered_data", storage_type= "session", data=None),
         dcc.Store(id="raw_configspace", storage_type= "session", data=None),
         dcc.Store(id="fanova_results_local", storage_type= "session", data=None),

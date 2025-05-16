@@ -90,6 +90,7 @@ app.layout = html.Div([
     #session means that data is cleared after browser is closed
 
     dcc.Store(id="fanova_results", storage_type="session", data=None),
+    dcc.Store(id="fetched_ids", storage_type="session", data=None),
     dcc.Store(id='flows', storage_type='session', data=None),
     dcc.Location(id="url"),
     sidebar,

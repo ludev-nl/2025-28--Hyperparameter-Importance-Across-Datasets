@@ -29,6 +29,7 @@ def display_results(fanova_results):
 
 
 layout = dbc.Container([
+    # dcc.Store(id="fetched_ids", storage_type="session"),
     dbc.Row([
         dbc.Col([
             html.Center(html.H3('Violin Plot', style={"marginBottom": "20px"})),
@@ -72,11 +73,16 @@ def toggle_download_button(data):
     Output("download-fanovaresults-csv", "data"),
     Input("export_csv_button", "n_clicks"),
     State("fanova_results", "data"),
+    State("fetched_ids", "data"),
     prevent_initial_call=True
 )
-def export_csv(n_clicks, fanova_results):
+def export_csv(n_clicks, fanova_results, fetched_ids):
     if fanova_results is None:
         raise dash.exceptions.PreventUpdate
 
     results_df = read_json(StringIO(fanova_results))
-    return dcc.send_data_frame(results_df.to_csv, "fanova_results.csv", index=False)
+
+    flow_id = fetched_ids.get("flow_id", "unkouwn") if fetched_ids else "unknouwn"
+    suite_id = fetched_ids.get("suite_id", "unkouwn") if fetched_ids else "unkouwn"
+    filename = f"fanova_results_f{flow_id}_s{suite_id}.csv"
+    return dcc.send_data_frame(results_df.to_csv, filename, index=False)
