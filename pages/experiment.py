@@ -352,7 +352,16 @@ config_content = html.Div([
                                             dbc.Col(dash.dash_table.DataTable(id='nan_table',
                                                                               editable=False,
                                                                               cell_selectable=False)),
-                                      ]),
+                                                                            ]),
+                              dbc.Row(dbc.Col(dash.dash_table.DataTable(id='const_table',
+                                                                              editable=False,
+                                                                              cell_selectable=False,
+                                                                              style_table={
+                                                                                'margin-top': '10px',
+                                                                                'width' : '50%',
+                                                                                'height': '300px',
+                                                                                'overflowY': 'scroll'
+                                                                               }))),
                               dcc.Store(id='filtered_config_int', storage_type='session'),
                               dcc.Store(id='filtered_config_float', storage_type='session'),
                               dcc.Store(id='filtered_config_cat', storage_type='session'),
@@ -553,6 +562,7 @@ def concat_filtered(filtered_config_int, filtered_config_float, filtered_config_
     Output(component_id='filtered_data', component_property='data'),
     Output(component_id='runs_table', component_property='data'),
     Output(component_id='nan_table', component_property='data'),
+    Output(component_id='const_table', component_property='data'),
     Input(component_id='filter_button', component_property='n_clicks'),
     Input(component_id='raw_data_store', component_property='data'),
     State(component_id='raw_configspace', component_property='data'),
@@ -565,14 +575,16 @@ def filter_action(n_clicks, raw_data, raw_space, filter_cfg):
         return sum(counts)
 
     if raw_data is None or len(raw_data) == 0:
-        return None, None, None
+        return None, None, None, None
 
     if dash.callback_context.triggered_id == 'raw_data_store':
         return (None,
                 [{'Task': id, 'Runs': len(raw_data[id])}
                  for id in raw_data.keys()],
                 [{'Hyperparameter': p['name'], 'Missing values': nan_count(raw_data, p['name'])}
-                 for p in raw_space['hyperparameters'] if p['type'] != 'constant'])
+                 for p in raw_space['hyperparameters'] if p['type'] != 'constant'],
+                [{'Constant Hyperparameters': p['name']}
+                 for p in raw_space['hyperparameters'] if p['type'] == 'constant'])
 
     serialized = {'hyperparameters': filter_cfg.values()}
     filter_space = ConfigurationSpace.from_serialized_dict(serialized)
@@ -589,7 +601,8 @@ def filter_action(n_clicks, raw_data, raw_space, filter_cfg):
              'Filtered missing values': nan_count(filtered, p['name'])}
             for p in raw_space['hyperparameters'] if p['type'] != 'constant']
 
-    return Serverside(filtered), runs, nans
+    return Serverside(filtered), runs, nans, dash.no_update
+
 
 
 @callback(
@@ -667,10 +680,10 @@ layout = dbc.Container(
     prevent_initial_call=True
 )
 def store_log_checkbox(value):
-    return "log" in value  
+    return "log" in value
 
 @callback(
-    Output("config-output", "children"),  
+    Output("config-output", "children"),
     Input("min_float_value", "value"),
     Input("max_float_value", "value"),
     State("hyperparameter", "value"),
