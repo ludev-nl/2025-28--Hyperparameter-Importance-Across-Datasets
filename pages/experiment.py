@@ -507,6 +507,15 @@ def show_adequate_range(hyperparameter, filtered_config, raw_configspace, log_da
                     dbc.Input(type="number",id="max_int_value",value=hyperparameter_value['upper']),
                     width=2
                 ),
+        dbc.Col(
+                    dcc.Checklist(
+                        options=[{"label":"Use log scale","value":"log"}],
+                        value=['log'] if log else [],
+                        id="log-scale-checkbox",
+                        inline=True,
+                    ),
+                    width={"size":6, "offset":3}
+                )
         )
     elif hyperparameter_value['type'] == 'categorical':
         return(
