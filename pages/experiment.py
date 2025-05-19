@@ -616,13 +616,12 @@ def concat_filtered(filtered_config_int, filtered_config_float, filtered_config_
     Output(component_id='nan_table', component_property='data'),
     Output(component_id='const_table', component_property='data'),
     Input(component_id='filter_button', component_property='n_clicks'),
-    Input(component_id='fetched_ids', component_property='modified_timestamp'),
-    State(component_id='raw_data_store', component_property='data'),
+    Input(component_id='raw_data_store', component_property='data'),
     State(component_id='raw_configspace', component_property='data'),
     State(component_id='filtered_config', component_property='data'),
     prevent_initial_call=False
 )
-def filter_action(n_clicks, ids, raw_data, raw_space, filter_cfg):
+def filter_action(n_clicks, raw_data, raw_space, filter_cfg):
     def nan_count(data, col):
         counts = [df[col].isna().sum() for df in data.values()]
         return sum(counts)
@@ -630,7 +629,7 @@ def filter_action(n_clicks, ids, raw_data, raw_space, filter_cfg):
     if raw_data is None or len(raw_data) == 0:
         return None, None, None, None
 
-    if dash.callback_context.triggered_id == 'fetched_ids' or filter_cfg is None:
+    if dash.callback_context.triggered_id == 'raw_data_store' or filter_cfg is None:
         return (None,
                 [{'Task': id, 'Runs': len(raw_data[id])}
                  for id in raw_data.keys()],
