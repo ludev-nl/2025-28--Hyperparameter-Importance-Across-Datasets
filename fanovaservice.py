@@ -4,7 +4,7 @@ import pandas as pd
 from fanova import fANOVA
 from ConfigSpace import ConfigurationSpace
 from ConfigSpace import Constant
-from ConfigSpace import CategoricalHyperparameter, UniformFloatHyperparameter
+from ConfigSpace import CategoricalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter, OrdinalHyperparameter
 from ConfigSpace.hyperparameters import NumericalHyperparameter
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
@@ -149,7 +149,9 @@ def impute_data(data: dict[int, pd.DataFrame],
 
 
 def prepare_data(data: dict[int, pd.DataFrame],
-                 cfg_space: ConfigurationSpace) -> dict[int, pd.DataFrame]:
+                 cfg_space: ConfigurationSpace,
+                 max_bins:int = 32) \
+        -> tuple[dict[int, pd.DataFrame], ConfigurationSpace]:
     """Prepares the data for fANOVA. This includes rounding numeric data
     to a certain amount of decimal digits, and converting categorical to
     numeric values. The data should already have been imputed, and constant
@@ -157,38 +159,39 @@ def prepare_data(data: dict[int, pd.DataFrame],
     """
     res = {}
 
-    cat = [(p_name, cfg_space[p_name]) for p_name in cfg_space.keys()
-           if isinstance(cfg_space[p_name], CategoricalHyperparameter)]
+    cat = {p_name: cfg_space[p_name] for p_name in cfg_space.keys()
+           if isinstance(cfg_space[p_name], CategoricalHyperparameter)}
 
-    num = [(p_name, cfg_space[p_name]) for p_name in cfg_space.keys()
+    num = [p_name for p_name in cfg_space.keys()
            if isinstance(cfg_space[p_name], NumericalHyperparameter)]
 
-    n_bins = 20
+    all_data = pd.concat([task_data[num] for task_data in data.values()])
+    bounds = {}
+    ordinal_params = []
+
+    for p_name in num:
+        n_bins = min(128, max_bins, all_data[p_name].nunique())
+        sorted = np.sort(all_data[p_name])
+        bounds_index = np.linspace(0, len(sorted) - 1, n_bins)[1:].astype('int')
+        bounds[p_name] = sorted[bounds_index]
+        ordinal_params.append(OrdinalHyperparameter(p_name, range(n_bins), default_value=n_bins//2))
+
+    cfg_space = ConfigurationSpace(list(cat.values()))
+    cfg_space.add(ordinal_params)
 
     for task, task_data in data.items():
-        prep = task_data.apply(np.round, decimals=ROUND_PLACES)
+        prep = task_data
 
-        for p_name, param in cat:
+        for p_name, param in cat.items():
             prep[p_name] = prep[p_name].map((lambda option:
                                              param.choices.index(option)))
 
-        # TODO: for this to have actual effect, they would need to be ordinal
-        for p_name, param in num:
-            if prep[p_name].nunique() <= n_bins:
-                continue
-            sorted = np.sort(prep[p_name])
-            bounds_index = np.linspace(0, len(sorted) - 1, n_bins)[1:].astype('int')
-            bounds = sorted[bounds_index]
-            bin_map = np.digitize(prep[p_name], bounds)
-            for i in range(n_bins):
-                mask = (bin_map == i)
-                value = sorted[0] if i == 0 else bounds[i-1]
-                if mask.any():
-                    prep.loc[mask, p_name] = value
+        for p_name, boundaries in bounds.items():
+            prep[p_name] = np.digitize(prep[p_name], boundaries)
 
         res[task] = prep.astype(np.float64)
 
-    return res
+    return res, cfg_space
 
 
 def run_fanova(task_data: pd.DataFrame,
