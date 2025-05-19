@@ -196,7 +196,8 @@ def prepare_data(data: dict[int, pd.DataFrame],
 
 def run_fanova(task_data: pd.DataFrame,
                cfg_space: ConfigurationSpace,
-               min_runs: int = 0) -> dict[str, float] | None:
+               min_runs: int = 0,
+               n_pairs: int = 3) -> dict[str, float] | None:
     """Run fANOVA on data for one task, which contains imputed and prepared
     setups and evals that fit in the configuration space cfg_space. If the
     task does not have at least min_runs runs, return None. Returns a dict
@@ -215,6 +216,11 @@ def run_fanova(task_data: pd.DataFrame,
     for index, param_name in enumerate(cfg_space.keys()):
         score = fnv.quantify_importance((index,))[(index,)]
         result[param_name] = score['individual importance']
+
+    pairs = fnv.get_most_important_pairwise_marginals(n = n_pairs)
+
+    result.update({name[0]+'_-_'+name[1]: importance
+                   for name, importance in pairs.items()})
 
     return result
 
