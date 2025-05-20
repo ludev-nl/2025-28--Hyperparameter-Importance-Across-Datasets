@@ -17,6 +17,7 @@ def fetch_flows() -> pd.DataFrame | None:
         return None
     return f.set_index('id')[['full_name']]
 
+
 def fetch_suites() -> pd.DataFrame | None:
     """Fetch all suites on openml, in a dataframe indexed on suite ID, and
     with columns for the name (called 'alias'), or None if no flows exist.
@@ -111,5 +112,3 @@ def export_csv(flow_id: int,
 
     for (task, task_data) in data.items():
         task_data.to_csv(folder_name + f't{task}.csv')
-
-

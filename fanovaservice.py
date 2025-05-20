@@ -4,7 +4,7 @@ import pandas as pd
 from fanova import fANOVA
 from ConfigSpace import ConfigurationSpace
 from ConfigSpace import Constant
-from ConfigSpace import CategoricalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter, OrdinalHyperparameter
+from ConfigSpace import CategoricalHyperparameter, OrdinalHyperparameter
 from ConfigSpace.hyperparameters import NumericalHyperparameter
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
@@ -148,19 +148,18 @@ def impute_data(data: dict[int, pd.DataFrame],
     return imputed_data, imputed_cfg
 
 
-def prepare_data(data: dict[int, pd.DataFrame],
-                 cfg_space: ConfigurationSpace,
-                 max_bins:int = 32) \
+def bin_numeric(data: dict[int, pd.DataFrame],
+                cfg_space: ConfigurationSpace,
+                max_bins: int = 32) \
         -> tuple[dict[int, pd.DataFrame], ConfigurationSpace]:
-    """Prepares the data for fANOVA. This includes rounding numeric data
-    to a certain amount of decimal digits, and converting categorical to
-    numeric values. The data should already have been imputed, and constant
-    hyperparameters should have been removed.
+    """Bins all numerical data in at most max_bins bins, up to 128 bins. If
+    the amount of unique values is less than the amount of bins, we take the
+    amount of unique values as bin count. The values are binned such that all
+    bins contain roughly the same amount of values, automatically taking
+    non-uniform distributions into account. In the returned configuration
+    space all numerical hyperparameters are replaced by ordinal ones.
     """
     res = {}
-
-    cat = {p_name: cfg_space[p_name] for p_name in cfg_space.keys()
-           if isinstance(cfg_space[p_name], CategoricalHyperparameter)}
 
     num = [p_name for p_name in cfg_space.keys()
            if isinstance(cfg_space[p_name], NumericalHyperparameter)]
@@ -172,31 +171,53 @@ def prepare_data(data: dict[int, pd.DataFrame],
     for p_name in num:
         n_bins = min(128, max_bins, all_data[p_name].nunique())
         sorted = np.sort(all_data[p_name])
-        bounds_index = np.linspace(0, len(sorted) - 1, n_bins)[1:].astype('int')
+        bounds_index = np.linspace(0, len(sorted)-1, n_bins)[1:].astype('int')
         bounds[p_name] = sorted[bounds_index]
-        ordinal_params.append(OrdinalHyperparameter(p_name, range(n_bins), default_value=n_bins//2))
+        ordinal_params.append(OrdinalHyperparameter(p_name,
+                                                    range(n_bins),
+                                                    default_value=n_bins//2))
 
-    cfg_space = ConfigurationSpace(list(cat.values()))
+    cat = [p for p in cfg_space.values()
+           if isinstance(p, CategoricalHyperparameter)]
+    cfg_space = ConfigurationSpace(space=cat)
     cfg_space.add(ordinal_params)
 
     for task, task_data in data.items():
-        prep = task_data
-
-        for p_name, param in cat.items():
-            prep[p_name] = prep[p_name].map((lambda option:
-                                             param.choices.index(option)))
-
         for p_name, boundaries in bounds.items():
-            prep[p_name] = np.digitize(prep[p_name], boundaries)
+            task_data[p_name] = np.digitize(task_data[p_name], boundaries)
 
-        res[task] = prep.astype(np.float64)
+        res[task] = task_data
 
     return res, cfg_space
 
 
+def prepare_data(data: dict[int, pd.DataFrame],
+                 cfg_space: ConfigurationSpace) -> dict[int, pd.DataFrame]:
+    """Prepares the data for fANOVA. This includes rounding numeric data
+    to a certain amount of decimal digits, and converting categorical and
+    constant hyperparameters to numeric values. The data should already
+    have been imputed.
+    """
+    res = {}
+
+    for task, task_data in data.items():
+        for param_name, param in cfg_space.items():
+            if isinstance(param, CategoricalHyperparameter):
+                task_data[param_name] = \
+                    task_data[param_name].map((lambda option:
+                                               param.choices.index(option)))
+            elif isinstance(param, Constant):
+                task_data[param_name] = 0
+
+        res[task] = task_data.astype(np.float64)\
+                             .apply(np.round, decimals=ROUND_PLACES)
+
+    return res
+
+
 def run_fanova(task_data: pd.DataFrame,
                cfg_space: ConfigurationSpace,
-               min_runs: int = 0,
+               min_runs: int = 1,
                n_pairs: int = 3) -> dict[str, float] | None:
     """Run fANOVA on data for one task, which contains imputed and prepared
     setups and evals that fit in the configuration space cfg_space. If the
@@ -217,7 +238,7 @@ def run_fanova(task_data: pd.DataFrame,
         score = fnv.quantify_importance((index,))[(index,)]
         result[param_name] = score['individual importance']
 
-    pairs = fnv.get_most_important_pairwise_marginals(n = n_pairs)
+    pairs = fnv.get_most_important_pairwise_marginals(n=n_pairs)
 
     result.update({name[0]+'_-_'+name[1]: importance
                    for name, importance in pairs.items()})
