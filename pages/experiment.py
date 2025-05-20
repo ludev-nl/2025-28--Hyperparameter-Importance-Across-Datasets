@@ -308,11 +308,13 @@ def toggle_buttons(data):
     State('min_runs', 'value'),
     State('log_scale_choice', 'data'),
     State('analysis_select', 'value'),
+    State('pairwise_toggle', 'value'),
+    State('n_pairs_input', 'value'),
+    State('n_bins_input', 'value'),
     prevent_initial_call=True,
     background=True,
     running=[
         (Output("fanova", "disabled"), True, False),
-        # (Output('progress_fanova', 'color'), 'primary', 'success'),
         (Output("progress_fanova", "style"), {"visibility": "visible"}, {"visibility": "hidden"}),
         (Output("cancel_button2", "style"), {"visibility": "visible"}, {"visibility": "hidden"})
     ],
@@ -321,7 +323,7 @@ def toggle_buttons(data):
     progress_default=['0', '100'],
     cache_args_to_ignore=[0] # Ignore the button clicks
 )
-def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_data, param_selection):
+def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_data, param_selection, toggle_pairs, n_pairs, n_bins):
     if (raw_data is None and filtered_data is None) or len(param_selection) < 2:
         raise PreventUpdate
 
@@ -330,6 +332,11 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_da
 
     # Finally we prepare to run fanova
     imputed_data, extended_cfg_space = fnvs.impute_data(data, cfg_space)
+    if 'pairwise' in toggle_pairs:
+        n_pairs = n_pairs or 3
+        n_bins = n_bins or 32
+        imputed_data, extended_cfg_space = fnvs.bin_numeric(imputed_data, extended_cfg_space, n_bins)
+
     processed_data = fnvs.prepare_data(imputed_data, extended_cfg_space)
 
     for param in log_data.keys():
@@ -344,8 +351,10 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_da
     for task, task_data in processed_data.items():
         i += 1
         set_progress((str(i), str(len(processed_data))))
-
-        result = fnvs.run_fanova(task_data[['value'] + param_selection], selected_space, min_runs)
+        if 'pairwise' in toggle_pairs:
+            result = fnvs.run_fanova(task_data[['value'] + param_selection], selected_space, min_runs, n_pairs)
+        else:
+            result = fnvs.run_fanova(task_data[['value'] + param_selection], selected_space, min_runs)
         if result:
             results[task] = result
     results = pd.DataFrame.from_dict(results, orient='index')
@@ -687,15 +696,62 @@ def update_global_results(data):
 
 fanova_content = html.Div([
     html.Br(),
-    dbc.Row([
-        dbc.Col(html.Div("Select which parameters to analyze:"))
-    ]),
+    html.Div("Select which parameters to analyze:"),
     dcc.Dropdown(
         id='analysis_select',
         persistence=True,
         persistence_type='session',
         multi=True
     ),
+
+    html.Br(),
+    dbc.Checklist(
+        id='pairwise_toggle',
+        options=[{'label': 'Compute pairwise importance (requires binning of numeric hyperparameters)',
+                  'value': 'pairwise'}],
+        value=[],
+        persistence=True,
+        persistence_type='session'
+    ),
+    dbc.Collapse(
+        [
+            html.Br(),
+            dbc.Row([
+                dbc.Col(
+                    html.Div('Enter the number of most important pairwise marginals to show:')
+                ),
+                dbc.Col(
+                    dbc.Input(
+                        id="n_pairs_input",
+                        type="number",
+                        min=1,
+                        value=3,
+                        persistence=True,
+                        persistence_type='session',
+                    )
+                )
+            ]),
+            html.Br(),
+            dbc.Row([
+                dbc.Col(
+                    html.Div('Enter maximum amount of bins for numerical hyperparameters:')
+                ),
+                dbc.Col(
+                    dbc.Input(
+                        id="n_bins_input",
+                        type="number",
+                        min=2,
+                        value=32,
+                        persistence=True,
+                        persistence_type='session',
+                    )
+                )
+            ])
+        ],
+        id='pairwise_settings_collapse',
+        is_open=False,
+    ),
+
     html.Br(),
     html.Center(
         dbc.Button(
@@ -732,6 +788,20 @@ fanova_content = html.Div([
     ])
 ])
 
+
+
+@callback(
+    Output('pairwise_settings_collapse', 'is_open'),
+    Output('n_pairs_input', 'value'),
+    Output('n_bins_input', 'value'),
+    Input('pairwise_toggle', 'value'),
+    prevent_initial_call=False
+)
+def toggle_pairwise_settings(toggle):
+    if 'pairwise' in toggle:
+        return True, dash.no_update, dash.no_update
+    else:
+        return False, 3, 32
 
 
 layout = dbc.Container(
