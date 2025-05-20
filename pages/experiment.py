@@ -46,10 +46,10 @@ flow_content = html.Div([
                                     ]),
                             dbc.Row([
                                         dbc.Col(html.Div(
-                                                    dcc.Dropdown(df_to_dict_list(fetcher.fetch_suites(), 'alias'),
-                                                                 id='suite_dropdown',
+                                                    dcc.Dropdown(id='suite_dropdown',
                                                                  persistence=True,
-                                                                 persistence_type='session')
+                                                                 persistence_type='session',
+                                                                 placeholder='Please wait while we fetch the available suites...')
                                                 )),
                                     ]),
                             html.Br(),
@@ -138,6 +138,16 @@ def swap_placeholder(data):
     if data is None or len(data) == 0:
         raise PreventUpdate
     return 'Search tokens should be at least 3 characters...'
+
+
+@callback(
+    Output('suite_dropdown', 'options'),
+    Output('suite_dropdown', 'placeholder'),
+    Input('suites', 'data'),
+    prevent_initial_call=False
+)
+def update_suites(suites):
+    return df_to_dict_list(suites, 'alias'), 'Select...'
 
 
 # Callback for the flow selection dropdown menu
@@ -348,16 +358,23 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_da
     # Running fanova takes quite long, so I split it per task
     results = {}
     i = 0
+    n = len(selected_space)
+    total_pairs = (n*(n-1)) // 2
     for task, task_data in processed_data.items():
         i += 1
         set_progress((str(i), str(len(processed_data))))
         if 'pairwise' in toggle_pairs:
-            result = fnvs.run_fanova(task_data[['value'] + param_selection], selected_space, min_runs, n_pairs)
+            result = fnvs.run_fanova(task_data[['value'] + param_selection], selected_space, min_runs, total_pairs)
         else:
             result = fnvs.run_fanova(task_data[['value'] + param_selection], selected_space, min_runs)
         if result:
             results[task] = result
     results = pd.DataFrame.from_dict(results, orient='index')
+
+    if 'pairwise' in toggle_pairs:
+        pairwise = results.iloc[:,n:]
+        avg_ranks = pairwise.rank(axis=1).mean(axis=0).sort_values(ascending=False).index
+        results = results.drop(columns=avg_ranks[n_pairs:])
 
     return results.to_json()
 
@@ -431,6 +448,13 @@ config_content = html.Div([
 )
 def table_formatting(min_runs, data):
     return [
+        {
+            'if': {
+                'filter_query': f'{{Runs}} < {min_runs}',
+                'column_id': 'Runs'
+            },
+            'backgroundColor': '#FF4136'
+        },
         {
             'if': {
                 'filter_query': f'{{Filtered runs}} < {min_runs}',

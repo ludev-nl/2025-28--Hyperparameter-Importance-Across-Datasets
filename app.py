@@ -2,7 +2,7 @@ import dash
 from dash import DiskcacheManager, CeleryManager
 import dash_bootstrap_components as dbc
 from dash_extensions.enrich import DashProxy, ServersideOutputTransform, Input, Output, dcc, html, Serverside, callback
-from openmlfetcher import fetch_flows
+from openmlfetcher import fetch_flows, fetch_suites
 import sys
 
 
@@ -99,6 +99,7 @@ app.layout = html.Div([
     dcc.Store(id="fanova_results", storage_type="session", data=None),
     dcc.Store(id="fetched_ids", storage_type="session", data=None),
     dcc.Store(id='flows', storage_type='session', data=None),
+    dcc.Store(id='suites', storage_type='session', data=None),
     dcc.Location(id="url"),
     sidebar,
     content
@@ -108,6 +109,7 @@ app.layout = html.Div([
 
 @callback(
     Output('flows', 'data'),
+    Output('suites', 'data'),
     Input('flows', 'id'),
     background=True,
     prevent_initial_call=False,
@@ -116,7 +118,10 @@ app.layout = html.Div([
 def load_flows(id):
     options_df = fetch_flows()
     options_df['id_str'] = options_df.index.astype(str)
-    return Serverside(options_df)
+
+    suites_df = fetch_suites()
+
+    return Serverside(options_df), Serverside(suites_df)
 
 if deploy:
     app.register_celery_tasks()
