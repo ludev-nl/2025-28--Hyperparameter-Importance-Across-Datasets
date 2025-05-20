@@ -13,20 +13,13 @@ import numpy as np
 
 def colormap(hyperparameters):
     number_hp = len(hyperparameters)
-    gist_rainbow = mpl.colormaps['gist_rainbow'].resampled(number_hp) 
+    gist_rainbow = mpl.colormaps['gist_rainbow'].resampled(number_hp)
     new_colors = gist_rainbow(np.linspace(0,1,number_hp))
     hex_colors = [mpl.colors.to_hex(c) for c in new_colors]
     return hex_colors
 
-
-
-
-# def colormap(hyperparameters):
-#     cmap = mpl.colormaps['gist_rainbow']
-#     colormap = {}
-#     for hp, n in zip(hyperparameters, range(len(hyperparameters))):
-#         colormap['hp'] = cmap(n/len(hyperparameters))
-#     return colormap
+def pretty_name(name):
+    return name[0].upper() + name[1:].replace('_', ' ')
 
 def violinplot(fanova_results: pd.DataFrame,
                show: bool) -> go.Figure:
@@ -44,11 +37,10 @@ def violinplot(fanova_results: pd.DataFrame,
     hyperparameters = plot_data.rank(axis=1).mean(axis=0).sort_values().index
 
     color_dict = colormap(hyperparameters)
-    # print(color_dict)
     i = -1
     for hp in hyperparameters:
-        i = i + 1 
-        name = hp[0].upper() + hp[1:].replace('_', ' ')
+        i = i + 1
+        name = pretty_name(hp)
         fig.add_trace(go.Violin(x=[name]*(plot_data.shape[0]),
                                 y=plot_data[hp].tolist(),
                                 name=name,
@@ -75,6 +67,7 @@ def crit_diff_diagram(fanova_results: pd.DataFrame) -> str:
     dict_data = {val: np.array(list(fanova_results[val])) for val in fanova_results.columns}
     data2 = (
       pd.DataFrame(fanova_results)
+      .rename(mapper=pretty_name, axis=1)
       .rename_axis('cv_fold')
       .melt(
           var_name='estimator',
