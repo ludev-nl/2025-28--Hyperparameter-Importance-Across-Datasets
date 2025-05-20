@@ -4,7 +4,7 @@ import pandas as pd
 from fanova import fANOVA
 from ConfigSpace import ConfigurationSpace
 from ConfigSpace import Constant
-from ConfigSpace import CategoricalHyperparameter
+from ConfigSpace import CategoricalHyperparameter, OrdinalHyperparameter
 from ConfigSpace.hyperparameters import NumericalHyperparameter
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
@@ -29,7 +29,7 @@ def auto_configspace(data: dict[int, pd.DataFrame]) -> ConfigurationSpace:
                      | float
                      | str] = {}
 
-    params_data = full_data.drop(columns=['value'])
+    params_data = full_data.drop(columns=['value'], errors='ignore')
     params_data = params_data.dropna(axis=1, how='all')
     num_cols = params_data.select_dtypes(include=['number']).columns
     cat_cols = params_data.select_dtypes(exclude=['number']).columns
@@ -84,7 +84,9 @@ def impute_data(data: dict[int, pd.DataFrame],
     """Imputes the data with a value out of range. The range is specified
     by cfg_space, and we return the imputed data, as well as an extended
     configuration space that includes the imputed values. Columns containing
-    only missing values are removed.
+    only missing values are removed. Constant columns with missing values
+    become categorical, while those without missing values are discarded
+    from the data.
     """
     # The values to impute with
     impute_vals: dict[str, int | float | str] = {}
@@ -100,26 +102,24 @@ def impute_data(data: dict[int, pd.DataFrame],
 
     for param_name, param in cfg_space.items():
         # If a parameter has no missing values, skip it
-        missing = False
+        incomplete = False
         for task_data in data.values():
-            missing |= task_data[param_name].isna().any()
+            incomplete |= task_data[param_name].isna().any()
 
         # Constant params become categorical by adding an impute value
-        # TODO: maybe they should remain constant?
+        # Truly constant ones are no longer relevant
         if isinstance(param, Constant):
-            if missing:
+            if incomplete:
                 impute_val = 'IMPUTE_HPIAD'
                 # Ensure impute value was not yet present
                 while impute_val == param.value:
                     impute_val = '_' + impute_val
                 impute_vals[param_name] = impute_val
                 cfg_dict[param_name] = [param.value, impute_val]
-            else:
-                cfg_dict[param_name] = param.value
 
         # Categorical params get an extra impute value
         elif isinstance(param, CategoricalHyperparameter):
-            if missing:
+            if incomplete:
                 impute_val = 'IMPUTE_HPIAD'
                 # Ensure impute value was not yet present
                 while impute_val in param.choices:
@@ -132,7 +132,7 @@ def impute_data(data: dict[int, pd.DataFrame],
 
         # Numerical params are imputed with one below their lower bound
         elif isinstance(param, NumericalHyperparameter):
-            if missing:
+            if incomplete:
                 impute_vals[param_name] = param.lower - 1
                 cfg_dict[param_name] = (param.lower - 1, param.upper)
             else:
@@ -141,11 +141,57 @@ def impute_data(data: dict[int, pd.DataFrame],
     # The resulting data
     imputed_data = {}
 
+    # The resulting ConfigSpace
+    imputed_cfg = ConfigurationSpace(cfg_dict)
+
     for task, task_data in data.items():
         imputed_data[task] = \
-            task_data[['value'] + list(cfg_space.keys())].fillna(impute_vals)
+            task_data[['value'] + list(imputed_cfg.keys())].fillna(impute_vals)
 
-    return imputed_data, ConfigurationSpace(cfg_dict)
+    return imputed_data, imputed_cfg
+
+
+def bin_numeric(data: dict[int, pd.DataFrame],
+                cfg_space: ConfigurationSpace,
+                max_bins: int = 32) \
+        -> tuple[dict[int, pd.DataFrame], ConfigurationSpace]:
+    """Bins all numerical data in at most max_bins bins, up to 128 bins. If
+    the amount of unique values is less than the amount of bins, we take the
+    amount of unique values as bin count. The values are binned such that all
+    bins contain roughly the same amount of values, automatically taking
+    non-uniform distributions into account. In the returned configuration
+    space all numerical hyperparameters are replaced by ordinal ones.
+    """
+    res = {}
+
+    num = [p_name for p_name in cfg_space.keys()
+           if isinstance(cfg_space[p_name], NumericalHyperparameter)]
+
+    all_data = pd.concat([task_data[num] for task_data in data.values()])
+    bounds = {}
+    ordinal_params = []
+
+    for p_name in num:
+        n_bins = min(128, max_bins, all_data[p_name].nunique())
+        sorted = np.sort(all_data[p_name])
+        bounds_index = np.linspace(0, len(sorted)-1, n_bins)[1:].astype('int')
+        bounds[p_name] = sorted[bounds_index]
+        ordinal_params.append(OrdinalHyperparameter(p_name,
+                                                    range(n_bins),
+                                                    default_value=n_bins//2))
+
+    non_num = [p for p in cfg_space.values()
+               if not isinstance(p, NumericalHyperparameter)]
+    cfg_space = ConfigurationSpace(space=non_num)
+    cfg_space.add(ordinal_params)
+
+    for task, task_data in data.items():
+        for p_name, boundaries in bounds.items():
+            task_data[p_name] = np.digitize(task_data[p_name], boundaries)
+
+        res[task] = task_data
+
+    return res, cfg_space
 
 
 def prepare_data(data: dict[int, pd.DataFrame],
@@ -158,24 +204,24 @@ def prepare_data(data: dict[int, pd.DataFrame],
     res = {}
 
     for task, task_data in data.items():
-        prep = task_data.apply(np.round, decimals=ROUND_PLACES)
-
         for param_name, param in cfg_space.items():
             if isinstance(param, CategoricalHyperparameter):
-                prep[param_name] = \
-                    prep[param_name].map((lambda option:
-                                          param.choices.index(option)))
+                task_data[param_name] = \
+                    task_data[param_name].map((lambda option:
+                                               param.choices.index(option)))
             elif isinstance(param, Constant):
-                prep[param_name] = 0
+                task_data[param_name] = 0
 
-        res[task] = prep.astype(np.float64)
+        res[task] = task_data.astype(np.float64)\
+                             .apply(np.round, decimals=ROUND_PLACES)
 
     return res
 
 
 def run_fanova(task_data: pd.DataFrame,
                cfg_space: ConfigurationSpace,
-               min_runs: int = 0) -> dict[str, float] | None:
+               min_runs: int = 1,
+               n_pairs: int = 0) -> dict[str, float] | None:
     """Run fANOVA on data for one task, which contains imputed and prepared
     setups and evals that fit in the configuration space cfg_space. If the
     task does not have at least min_runs runs, return None. Returns a dict
@@ -190,17 +236,16 @@ def run_fanova(task_data: pd.DataFrame,
     fnv = fANOVA(X, Y, config_space=cfg_space)
 
     result = {}
-    index = -1
 
-    for param_name, param in cfg_space.items():
-        index += 1
-        if isinstance(param, Constant):
-            continue
-
+    for index, param_name in enumerate(cfg_space.keys()):
         score = fnv.quantify_importance((index,))[(index,)]
         result[param_name] = score['individual importance']
 
-    # TODO: pairwise marginals
+    if n_pairs > 0:
+        pairs = fnv.get_most_important_pairwise_marginals(n=n_pairs)
+
+        result.update({name[0]+'_-_'+name[1]: importance
+                       for name, importance in pairs.items()})
 
     return result
 
@@ -211,4 +256,4 @@ def export_csv(flow_id: int,
     # TODO: this is just for current testing. Eventually this
     # will be sent to Dash components without creating a file.
     # The first column is index, so dont plot that!
-    results.to_csv(f'fanova_f{flow_id}_s{suite_id}.csv')
+    results.to_csv(f'fanova_f{flow_id}_s{suite_id}_b.csv')
