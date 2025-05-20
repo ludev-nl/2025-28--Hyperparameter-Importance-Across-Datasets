@@ -1,7 +1,7 @@
 import dash
 from dash import DiskcacheManager, CeleryManager
 import dash_bootstrap_components as dbc
-from dash_extensions.enrich import DashProxy, ServersideOutputTransform, Input, Output, dcc, html, Serverside, callback, RedisBackend, FileSystemBackend
+from dash_extensions.enrich import DashProxy, ServersideOutputTransform, Input, Output, dcc, html, Serverside, callback
 from openmlfetcher import fetch_flows
 import sys
 
@@ -12,10 +12,18 @@ deploy = ('gunicorn' in sys.argv[0]
 
 
 if deploy:
+    from dash_extensions.enrich import RedisBackend as DashRedisBackend
     from celery import Celery
+    from celery.backends.redis import RedisBackend as CeleryRedisBackend
     from redis import StrictRedis
 
-    redis_url = 'redis://localhost:6379/0'
+    # Redis configuration
+    host = 'localhost'
+    port = 6379
+    db = 0
+    cache_expiry = 24 * 60 * 60
+
+    redis_url = 'redis://' + host + ':' + str(port) + '/' + str(db)
     redis_inst = StrictRedis.from_url(redis_url)
 
     try:
@@ -24,16 +32,15 @@ if deploy:
         sys.stderr.write('Make sure you have a Redis server running.')
         sys.exit()
 
+    # Configure the redis backend for Celery's job queue
     celery_app = Celery(__name__, backend=redis_url, broker=redis_url)
-    # TODO: this is a refresh-on-hit expiry. Instead configure the redis backend.
-    # Is it enough that we configure it for the backend (which is a RedisCache instance)?
-    # This here is a celery.backends.redis.RedisBackend
-    manager = CeleryManager(celery_app, cache_by=(lambda: 0), expire=3600)
-    # TODO: this is an absolute time-out. This might be a problem if the background
-    # callback caching caches the Serverside keys, and those keys might persist
-    # longer than the data they represent
-    backend = RedisBackend(default_timeout=3600, host="localhost", port=6379, db=0)
+    manager = CeleryManager(celery_app, cache_by=(lambda: 0))
+    rb = manager.handle.backend.expires = cache_expiry
+
+    # Configure the redis backend for Serverside Output Transform
+    backend = DashRedisBackend(default_timeout=cache_expiry+5, host=host, port=port, db=db)
 else:
+    from dash_extensions.enrich import FileSystemBackend
     from diskcache import Cache
 
     cache = Cache("./cache")

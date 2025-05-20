@@ -37,7 +37,7 @@ flow_content = html.Div([
                                                     dcc.Dropdown(id='Flow-input',
                                                                  persistence=True,
                                                                  persistence_type='session',
-                                                                 placeholder='Search tokens should be at least 3 characters...')
+                                                                 placeholder='Please wait while we fetch the available flows...')
                                                 )),
                                     ]),
                             html.Br(),
@@ -127,6 +127,17 @@ flow_content = html.Div([
 
                             ]),
                         ])
+
+
+@callback(
+    Output('Flow-input', 'placeholder'),
+    Input('flows', 'data'),
+    prevent_initial_call=False
+)
+def swap_placeholder(data):
+    if data is None or len(data) == 0:
+        raise PreventUpdate
+    return 'Search tokens should be at least 3 characters...'
 
 
 # Callback for the flow selection dropdown menu
