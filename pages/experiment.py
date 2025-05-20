@@ -334,7 +334,12 @@ def toggle_buttons(data):
     cache_args_to_ignore=[0] # Ignore the button clicks
 )
 def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_data, param_selection, toggle_pairs, n_pairs, n_bins):
-    if (raw_data is None and filtered_data is None) or len(param_selection) < 2:
+    if raw_data is None and filtered_data is None:
+        # TODO: display warning that there is no data to perform fanova on
+        raise PreventUpdate
+
+    if param_selection is None or len(param_selection) < 2:
+        # TODO: display warning that for relative importance, at least two parameters should be selected for analysis
         raise PreventUpdate
 
     data = filtered_data if (filtered_data is not None and len(filtered_data) != 0) else raw_data
