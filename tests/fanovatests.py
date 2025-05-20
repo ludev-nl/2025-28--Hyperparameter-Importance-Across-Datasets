@@ -2,7 +2,8 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, Constant
+from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, Constant, OrdinalHyperparameter
+from ConfigSpace.hyperparameters import NumericalHyperparameter
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
 import fanovaservice as fnvs
@@ -95,6 +96,29 @@ class FanovaTests(unittest.TestCase):
         # Assert that the new configspace is correct
         self.cfg_space_equal(new_space, imp_space)
 
+    def test_bins(self):
+        default = dict(cfg_space.get_default_configuration())
+        imputed = {id: data.fillna(default).dropna(axis=1, how='any')
+                   for id, data in self.data.items()}
+        imputed = {id: data.drop(columns=data.columns[data.nunique() <= 1])
+                   for id, data in imputed.items()}
+
+        binned, new_cfg = fnvs.bin_numeric(imputed, cfg_space)
+        all_binned = pd.concat(binned)
+
+        # Test that all hyperparams still exist
+        self.assertSetEqual(set(new_cfg.keys()), set(cfg_space.keys()))
+
+        # Test that all numerical hyperparams became ordinal
+        for p_name, param in new_cfg.items():
+            if isinstance(cfg_space[p_name], NumericalHyperparameter):
+                self.assertIsInstance(param, OrdinalHyperparameter)
+                self.assertLessEqual(set(all_binned[p_name].unique()), set(param.sequence))
+                self.assertLessEqual(set(param.sequence), set(range(32)))
+            else:
+                self.assertIsInstance(param, type(cfg_space[p_name]))
+
+
     def test_prepare(self):
         default = dict(cfg_space.get_default_configuration())
         imputed = {id: data.fillna(default).dropna(axis=1, how='any')
@@ -137,7 +161,10 @@ class FanovaTests(unittest.TestCase):
         prepared = imputed.map(lambda x: prep(x))
 
         # Run fANOVA once succesfully
-        result = fnvs.run_fanova(prepared, cfg_space, min_runs=0)
+        result = fnvs.run_fanova(prepared, cfg_space, min_runs=1, n_pairs=3)
+        self.assertIsNotNone(result)
+        self.assertGreaterEqual(result.keys(), cfg_space.keys())
+        self.assertEqual(len(result) - len(cfg_space), 3)
 
         # Run fANOVA once unsuccesfully
         result = fnvs.run_fanova(prepared, cfg_space, min_runs=len(prepared)+1)

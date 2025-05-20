@@ -177,9 +177,9 @@ def bin_numeric(data: dict[int, pd.DataFrame],
                                                     range(n_bins),
                                                     default_value=n_bins//2))
 
-    cat = [p for p in cfg_space.values()
-           if isinstance(p, CategoricalHyperparameter)]
-    cfg_space = ConfigurationSpace(space=cat)
+    non_num = [p for p in cfg_space.values()
+               if not isinstance(p, NumericalHyperparameter)]
+    cfg_space = ConfigurationSpace(space=non_num)
     cfg_space.add(ordinal_params)
 
     for task, task_data in data.items():
@@ -218,7 +218,7 @@ def prepare_data(data: dict[int, pd.DataFrame],
 def run_fanova(task_data: pd.DataFrame,
                cfg_space: ConfigurationSpace,
                min_runs: int = 1,
-               n_pairs: int = 3) -> dict[str, float] | None:
+               n_pairs: int = 0) -> dict[str, float] | None:
     """Run fANOVA on data for one task, which contains imputed and prepared
     setups and evals that fit in the configuration space cfg_space. If the
     task does not have at least min_runs runs, return None. Returns a dict
@@ -238,10 +238,11 @@ def run_fanova(task_data: pd.DataFrame,
         score = fnv.quantify_importance((index,))[(index,)]
         result[param_name] = score['individual importance']
 
-    pairs = fnv.get_most_important_pairwise_marginals(n=n_pairs)
+    if n_pairs > 0:
+        pairs = fnv.get_most_important_pairwise_marginals(n=n_pairs)
 
-    result.update({name[0]+'_-_'+name[1]: importance
-                   for name, importance in pairs.items()})
+        result.update({name[0]+'_-_'+name[1]: importance
+                       for name, importance in pairs.items()})
 
     return result
 
