@@ -364,12 +364,20 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, cfg_space, min_r
     for task, task_data in processed_data.items():
         i += 1
         set_progress((str(i), str(len(processed_data))))
+        if len(task_data) < min_runs:
+            continue
+
+        selected_data = task_data[['value'] + param_selection]
         if 'pairwise' in toggle_pairs:
-            result = fnvs.run_fanova(task_data[['value'] + param_selection], selected_space, min_runs, total_pairs)
+            results[task] = fnvs.run_fanova(selected_data,
+                                            selected_space,
+                                            total_pairs)
         else:
-            result = fnvs.run_fanova(task_data[['value'] + param_selection], selected_space, min_runs)
-        if result:
-            results[task] = result
+            results[task] = fnvs.run_fanova(selected_data,
+                                            selected_space,
+                                            0)
+        print(len(results[task]))
+
     results = pd.DataFrame.from_dict(results, orient='index')
 
     if 'pairwise' in toggle_pairs:

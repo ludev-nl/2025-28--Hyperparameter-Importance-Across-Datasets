@@ -12,7 +12,6 @@ import visualiser as vis
 # the first ten tasks or so in line 19 (using '... in tasks[:10]')
 flow_id = 6969
 suite_id = 99
-min_runs = 100
 max_runs = None
 
 # --------------------------- OpenML -----------------------------
@@ -75,7 +74,7 @@ results = {}
 end = time.time()
 for task, task_data in processed_data.items():
     start = end
-    result = fnvs.run_fanova(task_data, extended_cfg_space, min_runs)
+    result = fnvs.run_fanova(task_data, extended_cfg_space)
     end = time.time()
     if result:
         results[task] = result

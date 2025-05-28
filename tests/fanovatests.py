@@ -160,15 +160,11 @@ class FanovaTests(unittest.TestCase):
         imputed = self.data[1].fillna(default).dropna(axis=1, how='any')
         prepared = imputed.map(lambda x: prep(x))
 
-        # Run fANOVA once succesfully
-        result = fnvs.run_fanova(prepared, cfg_space, min_runs=1, n_pairs=3)
+        # Run fANOVA
+        result = fnvs.run_fanova(prepared, cfg_space, n_pairs=3)
         self.assertIsNotNone(result)
-        self.assertGreaterEqual(result.keys(), cfg_space.keys())
+        self.assertGreaterEqual(set(result.keys()), set(cfg_space.keys()))
         self.assertEqual(len(result) - len(cfg_space), 3)
-
-        # Run fANOVA once unsuccesfully
-        result = fnvs.run_fanova(prepared, cfg_space, min_runs=len(prepared)+1)
-        self.assertIsNone(result)
 
 
 if __name__ == '__main__':
