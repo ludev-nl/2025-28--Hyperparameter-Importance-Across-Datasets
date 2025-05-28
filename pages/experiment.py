@@ -1,7 +1,7 @@
 import dash
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-from ConfigSpace import ConfigurationSpace
+from ConfigSpace import ConfigurationSpace, Constant
 from dash_extensions.enrich import Input, Output, State, callback, dcc, html, Serverside
 from re import split
 import pandas as pd
@@ -310,6 +310,7 @@ def toggle_buttons(data):
     Input("fanova", "n_clicks"),
     State('raw_data_store', 'data'),
     State("filtered_data", "data"),
+    State('final_cfg_space', 'data'),
     State('min_runs', 'value'),
     State('log_scale_choice', 'data'),
     State('analysis_select', 'value'),
@@ -328,7 +329,7 @@ def toggle_buttons(data):
     progress_default=['0', '100'],
     cache_args_to_ignore=[0] # Ignore the button clicks
 )
-def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_data, param_selection, toggle_pairs, n_pairs, n_bins):
+def run_fanova(set_progress, n_clicks, raw_data, filtered_data, cfg_space, min_runs, log_data, param_selection, toggle_pairs, n_pairs, n_bins):
     if raw_data is None and filtered_data is None:
         # TODO: display warning that there is no data to perform fanova on
         raise PreventUpdate
@@ -338,7 +339,7 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, min_runs, log_da
         raise PreventUpdate
 
     data = filtered_data if (filtered_data is not None and len(filtered_data) != 0) else raw_data
-    cfg_space = fnvs.auto_configspace(data)
+    cfg_space = ConfigurationSpace.from_serialized_dict(cfg_space)
 
     # Finally we prepare to run fanova
     imputed_data, extended_cfg_space = fnvs.impute_data(data, cfg_space)
@@ -467,15 +468,12 @@ def table_formatting(min_runs, data):
 
 @callback(
     Output(component_id='hyperparameter_dd', component_property='options'),
-    Output('analysis_select', 'options'),
     Input(component_id='raw_configspace', component_property='data'),
     prevent_initial_call=True
 )
 def update_param_dropdown(raw_configspace):
-    # TODO: analysis select should only show those that are non-constant after filtering
-    choices = [param['name'] for param in raw_configspace['hyperparameters']
-               if param['type'] != 'constant']
-    return choices, choices
+    return [param['name'] for param in raw_configspace['hyperparameters']
+            if param['type'] != 'constant']
 
 
 def transform_cfg_space(cfg):
@@ -810,7 +808,8 @@ fanova_content = html.Div([
             ]),
             width={"size":1}
         )
-    ])
+    ]),
+    dcc.Store('final_cfg_space', 'session', None)
 ])
 
 
@@ -851,7 +850,7 @@ layout = dbc.Container(
             [
                 dbc.Tab(flow_content, label="Flow and Suite Selection", tab_id="flow"),
                 dbc.Tab(config_content, label="Configuration Space", tab_id="config"),
-                dbc.Tab(fanova_content, label="Run fANOVA", tab_id="fanova")
+                dbc.Tab(fanova_content, label="Run fANOVA", tab_id="fanova"),
             ],
             id="tabs",
             active_tab="flow",
@@ -877,3 +876,29 @@ def store_log_checkbox(value, cfg_space, param, log_data):
     log_data[param] = "log" in value
 
     return log_data
+
+@callback(
+    Output('final_cfg_space', 'data'),
+    Output('analysis_select', 'options'),
+    Input('tabs', 'active_tab'),
+    Input('raw_configspace', 'data'),
+    State('filtered_data', 'data'),
+    prevent_initial_call=True
+)
+def analysis_options(tab, raw_cfg, filtered_data):
+    trigger = dash.callback_context.triggered_id
+
+    if trigger == 'tabs' and tab != 'fanova':
+        raise PreventUpdate
+
+    if (trigger == 'raw_configspace'
+            or filtered_data is None
+            or len(filtered_data) == 0):
+        cfg_space = ConfigurationSpace.from_serialized_dict(raw_cfg)
+    else:
+        cfg_space = fnvs.auto_configspace(filtered_data)
+
+    choices = [name for name, param in cfg_space.items()
+               if not isinstance(param, Constant)]
+
+    return cfg_space.to_serialized_dict(), choices
