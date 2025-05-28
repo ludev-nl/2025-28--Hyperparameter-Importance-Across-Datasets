@@ -250,16 +250,11 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
             {"flow_id": flow_id, "suite_id": suite_id}
     )
 
-# TODO: the user can change the selected flow and suite without fetching new
-# data. Then the downloaded data will be the previous flow/suite, but be named
-# after the currently selected ones. Perhaps we should put these IDs in a store
-# when we have fetched, and also use this data when exporting fanova results.
+
 @callback(
     Output("download_raw_data", 'data'),
     Input("csv", "n_clicks"),
     State('raw_data_store', 'data'),
-    # State("Flow-input", "value"),
-    # State("suite_dropdown", "value"),
     State("fetched_ids", "data"),
     prevent_initial_call=True,
     background=True
@@ -477,6 +472,7 @@ def table_formatting(min_runs, data):
     prevent_initial_call=True
 )
 def update_param_dropdown(raw_configspace):
+    # TODO: analysis select should only show those that are non-constant after filtering
     choices = [param['name'] for param in raw_configspace['hyperparameters']
                if param['type'] != 'constant']
     return choices, choices
@@ -725,7 +721,7 @@ def update_global_results(data):
 
 fanova_content = html.Div([
     html.Br(),
-    html.Div("Select which parameters to analyze:"),
+    html.Div("Select at least two parameters to analyze (only those that are non-constant after filtering are presented):"),
     dcc.Dropdown(
         id='analysis_select',
         persistence=True,
@@ -847,9 +843,9 @@ layout = dbc.Container(
         dcc.Store(id='filtered_config', storage_type='session'),
         html.H1("Experiment Setup"),
         dcc.Markdown('''
-                1. Choose which flows and suites you want to include in the analysis. Click the fetch button to fetch them.
+                1. Choose which flow and suite you want to analyze. Click the fetch button to fetch their data.
                 2. Filter your configuration space by selecting which hyperparameter configurations should be included. By default, all configurations are included.
-                3. Select which parameters to analyze. Click the 'Run Fanova' button and wait for the results.
+                3. Select which parameters to analyze, and configure pairwise importance settings. Click the 'Run Fanova' button and wait for the results.
                 '''),
         dbc.Tabs(
             [
