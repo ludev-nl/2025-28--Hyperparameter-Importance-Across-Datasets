@@ -37,19 +37,26 @@ class FanovaTests(unittest.TestCase):
 
     def setUp(self):
         self.data = {}
+        n_samples = 10
         sample_size = 500
 
-        for id in range(10):
-            df = pd.DataFrame(cfg_space.sample_configuration(sample_size))
-            df.index += id * sample_size
-            df['value'] = np.random.rand(sample_size)
-            df['ignore'] = pd.NA
+        full_sample = cfg_space.sample_configuration(n_samples * sample_size)
+        full_df = pd.DataFrame(full_sample)
+        full_df['value'] = np.random.rand(n_samples * sample_size)
+        full_df['ignore'] = pd.NA
 
-            for p in cfg_space.keys():
-                if 'full' not in p:
-                    df[p] = df[p].map(lambda x: pd.NA if np.random.rand() < 0.1 else x)
+        for p in cfg_space.keys():
+            if 'full' not in p:
+                full_df[p] = full_df[p].map(lambda x:
+                                            pd.NA if np.random.rand() < 0.1
+                                            else x)
 
-            self.data[id] = df.convert_dtypes()
+        full_df = full_df.convert_dtypes()
+
+        self.data = {i: full_df.iloc[i*sample_size:(i+1)*sample_size]
+                     for i in range(n_samples)}
+
+        print(self.data)
 
     def stub_impute(self):
         default = dict(cfg_space.get_default_configuration())
