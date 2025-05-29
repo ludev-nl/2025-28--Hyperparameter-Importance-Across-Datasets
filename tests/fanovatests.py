@@ -8,7 +8,7 @@ from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
 import fanovaservice as fnvs
 
-
+# The configspace used to generate data
 cfg_space = ConfigurationSpace({'int': (0, 5),
                                 'full_int': (0, 5),
                                 'float': (0.0, 5.0),
@@ -16,7 +16,7 @@ cfg_space = ConfigurationSpace({'int': (0, 5),
                                 'full_cat': ['a', 'b', 'c', 'IMPUTE_HPIAD'],
                                 'const': 'IMPUTE_HPIAD',
                                 'full_const': -1})
-
+# The configspace as it should be after imputation
 imp_space = ConfigurationSpace({'int': (-1, 5),
                                 'full_int': (0, 5),
                                 'float': (-1.0, 5.0),
@@ -24,36 +24,68 @@ imp_space = ConfigurationSpace({'int': (-1, 5),
                                         'IMPUTE_HPIAD', '_IMPUTE_HPIAD'],
                                 'full_cat': ['a', 'b', 'c', 'IMPUTE_HPIAD'],
                                 'const': ['IMPUTE_HPIAD', '_IMPUTE_HPIAD']})
+# The configspace as it should be for fanova
+run_space = ConfigurationSpace({'int': (-1, 5),
+                                'full_int': (0, 5),
+                                'float': (-1.0, 5.0),
+                                'cat': ['a', 'b', 'c',
+                                        'IMPUTE_HPIAD', '_IMPUTE_HPIAD'],
+                                'full_cat': ['a', 'b', 'c', 'IMPUTE_HPIAD']})
 
 
 class FanovaTests(unittest.TestCase):
 
     def setUp(self):
-        self.data = \
-            {1: pd.read_csv('tests/sample1.csv', index_col=0).convert_dtypes(),
-             2: pd.read_csv('tests/sample2.csv', index_col=0).convert_dtypes()}
+        self.data = {}
+        sample_size = 500
 
-    def cfg_space_equal(self,
+        for id in range(10):
+            df = pd.DataFrame(cfg_space.sample_configuration(sample_size))
+            df.index += id * sample_size
+            df['value'] = np.random.rand(sample_size)
+            df['ignore'] = pd.NA
+
+            for p in cfg_space.keys():
+                if 'full' not in p:
+                    df[p] = df[p].map(lambda x: pd.NA if np.random.rand() < 0.1 else x)
+
+            self.data[id] = df.convert_dtypes()
+
+    def stub_impute(self):
+        default = dict(cfg_space.get_default_configuration())
+        imputed = {id: data.fillna(default).dropna(axis=1, how='any')
+                   for id, data in self.data.items()}
+        imputed = {id: data.drop(columns=data.columns[data.nunique() <= 1])
+                   for id, data in imputed.items()}
+        return imputed
+
+    def cfg_space_check(self,
                         created: ConfigurationSpace,
                         correct: ConfigurationSpace) -> bool:
         # Check that all hyperparams are as they should be
         for param_name, correct_param in correct.items():
             auto_param = created[param_name]
-            # For categorical hyperparams, list equality of choices is checked
-            # by default, but order is irrelevant so we check them as sets
-            if (isinstance(correct_param, CategoricalHyperparameter)
-                    and isinstance(auto_param, CategoricalHyperparameter)):
+            self.assertEqual(type(auto_param), type(correct_param))
+
+            # We do not care about the order of categoricals
+            if isinstance(auto_param, CategoricalHyperparameter):
                 self.assertSetEqual(set(auto_param.choices),
                                     set(correct_param.choices))
-            else:
-                self.assertEqual(auto_param, correct_param)
+            # Constants just have the same value
+            elif isinstance(auto_param, Constant):
+                self.assertEqual(auto_param.value, correct_param.value)
+            # Numericals might not display the full range in the random data
+            elif isinstance(auto_param, NumericalHyperparameter):
+                self.assertGreaterEqual(auto_param.lower, correct_param.lower)
+                self.assertLessEqual(auto_param.upper, correct_param.upper)
+                self.assertGreaterEqual(auto_param.upper, auto_param.lower)
 
     def test_cfg_space(self):
         auto_cfg_space = fnvs.auto_configspace(self.data)
         self.assertIsInstance(auto_cfg_space, ConfigurationSpace)
         self.assertSetEqual(set(auto_cfg_space.keys()), set(cfg_space.keys()))
 
-        self.cfg_space_equal(auto_cfg_space, cfg_space)
+        self.cfg_space_check(auto_cfg_space, cfg_space)
 
     def test_filter(self):
         filter_space = ConfigurationSpace({'int': (0, 4),
@@ -94,14 +126,10 @@ class FanovaTests(unittest.TestCase):
             self.assertNotIsInstance(p, Constant)
 
         # Assert that the new configspace is correct
-        self.cfg_space_equal(new_space, imp_space)
+        self.cfg_space_check(new_space, imp_space)
 
     def test_bins(self):
-        default = dict(cfg_space.get_default_configuration())
-        imputed = {id: data.fillna(default).dropna(axis=1, how='any')
-                   for id, data in self.data.items()}
-        imputed = {id: data.drop(columns=data.columns[data.nunique() <= 1])
-                   for id, data in imputed.items()}
+        imputed = self.stub_impute()
 
         binned, new_cfg = fnvs.bin_numeric(imputed, cfg_space)
         all_binned = pd.concat(binned)
@@ -120,11 +148,7 @@ class FanovaTests(unittest.TestCase):
 
 
     def test_prepare(self):
-        default = dict(cfg_space.get_default_configuration())
-        imputed = {id: data.fillna(default).dropna(axis=1, how='any')
-                   for id, data in self.data.items()}
-        imputed = {id: data.drop(columns=data.columns[data.nunique() <= 1])
-                   for id, data in imputed.items()}
+        imputed = self.stub_impute()
         prepared = fnvs.prepare_data(imputed, cfg_space)
 
         for prep in prepared.values():
@@ -140,7 +164,7 @@ class FanovaTests(unittest.TestCase):
 
     def test_run(self):
         # Replaces data by relevant numeric data for fanova
-        def prep(val):
+        def stub_prepare(val):
             if val == -1:
                 return 0
 
@@ -156,15 +180,14 @@ class FanovaTests(unittest.TestCase):
             return val
 
         # Prepare the data using stub implementations
-        default = dict(cfg_space.get_default_configuration())
-        imputed = self.data[1].fillna(default).dropna(axis=1, how='any')
-        prepared = imputed.map(lambda x: prep(x))
+        imputed = self.stub_impute()
+        prepared = imputed[0].map(lambda x: stub_prepare(x))
 
         # Run fANOVA
-        result = fnvs.run_fanova(prepared, cfg_space, n_pairs=3)
+        result = fnvs.run_fanova(prepared, run_space, n_pairs=3)
         self.assertIsNotNone(result)
-        self.assertGreaterEqual(set(result.keys()), set(cfg_space.keys()))
-        self.assertEqual(len(result) - len(cfg_space), 3)
+        self.assertGreaterEqual(set(result.keys()), set(run_space.keys()))
+        self.assertEqual(len(result) - len(run_space), 3)
 
 
 if __name__ == '__main__':
