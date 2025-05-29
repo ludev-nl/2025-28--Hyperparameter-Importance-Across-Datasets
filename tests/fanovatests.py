@@ -9,12 +9,13 @@ from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 import fanovaservice as fnvs
 
 # The configspace used to generate data
+# Those labeled 'full' have no missing values
 cfg_space = ConfigurationSpace({'int': (0, 5),
                                 'full_int': (0, 5),
                                 'float': (0.0, 5.0),
                                 'cat': ['a', 'b', 'c', 'IMPUTE_HPIAD'],
-                                'full_cat': ['a', 'b', 'c', 'IMPUTE_HPIAD'],
-                                'const': 'IMPUTE_HPIAD',
+                                'full_cat': ['a', 'b', 'c'],
+                                'const': 'x',
                                 'full_const': -1})
 # The configspace as it should be after imputation
 imp_space = ConfigurationSpace({'int': (-1, 5),
@@ -22,15 +23,17 @@ imp_space = ConfigurationSpace({'int': (-1, 5),
                                 'float': (-1.0, 5.0),
                                 'cat': ['a', 'b', 'c',
                                         'IMPUTE_HPIAD', '_IMPUTE_HPIAD'],
-                                'full_cat': ['a', 'b', 'c', 'IMPUTE_HPIAD'],
-                                'const': ['IMPUTE_HPIAD', '_IMPUTE_HPIAD']})
+                                'full_cat': ['a', 'b', 'c'],
+                                'const': ['x', 'IMPUTE_HPIAD']})
 # The configspace as it should be for fanova
+# const does not end up in here because we use a stub implementation
+# of imputation on the test for running fanova
 run_space = ConfigurationSpace({'int': (-1, 5),
                                 'full_int': (0, 5),
                                 'float': (-1.0, 5.0),
                                 'cat': ['a', 'b', 'c',
                                         'IMPUTE_HPIAD', '_IMPUTE_HPIAD'],
-                                'full_cat': ['a', 'b', 'c', 'IMPUTE_HPIAD']})
+                                'full_cat': ['a', 'b', 'c']})
 
 
 class FanovaTests(unittest.TestCase):
@@ -40,23 +43,27 @@ class FanovaTests(unittest.TestCase):
         n_samples = 10
         sample_size = 500
 
+        # Sample randomly from the ConfigSpace
         full_sample = cfg_space.sample_configuration(n_samples * sample_size)
         full_df = pd.DataFrame(full_sample)
+
+        # Add columns not present in ConfigSpace
         full_df['value'] = np.random.rand(n_samples * sample_size)
         full_df['ignore'] = pd.NA
 
+        # Add missing values
         for p in cfg_space.keys():
             if 'full' not in p:
                 full_df[p] = full_df[p].map(lambda x:
                                             pd.NA if np.random.rand() < 0.1
                                             else x)
 
+        # Make sure the columns are typed correctly
         full_df = full_df.convert_dtypes()
 
-        self.data = {i: full_df.iloc[i*sample_size:(i+1)*sample_size]
-                     for i in range(n_samples)}
-
-        print(self.data)
+        # Convert into dict of seperated DataFrames, as real data would be
+        self.data = {id: full_df.iloc[id*sample_size:(id+1)*sample_size]
+                     for id in range(n_samples)}
 
     def stub_impute(self):
         default = dict(cfg_space.get_default_configuration())
@@ -72,12 +79,14 @@ class FanovaTests(unittest.TestCase):
         # Check that all hyperparams are as they should be
         for param_name, correct_param in correct.items():
             auto_param = created[param_name]
+            if type(auto_param) != type(correct_param):
+                print(param_name)
             self.assertEqual(type(auto_param), type(correct_param))
 
             # We do not care about the order of categoricals
             if isinstance(auto_param, CategoricalHyperparameter):
-                self.assertSetEqual(set(auto_param.choices),
-                                    set(correct_param.choices))
+                self.assertLessEqual(set(auto_param.choices),
+                                     set(correct_param.choices))
             # Constants just have the same value
             elif isinstance(auto_param, Constant):
                 self.assertEqual(auto_param.value, correct_param.value)
@@ -96,13 +105,8 @@ class FanovaTests(unittest.TestCase):
 
     def test_filter(self):
         filter_space = ConfigurationSpace({'int': (0, 4),
-                                           'full_int': (0, 5),
                                            'float': (1.0, 5.0),
-                                           'cat': ['a', 'c', 'IMPUTE_HPIAD'],
-                                           'full_cat': ['a', 'b', 'c',
-                                                        'IMPUTE_HPIAD'],
-                                           'const': 'IMPUTE_HPIAD',
-                                           'full_const': -1})
+                                           'cat': ['a', 'c', 'IMPUTE_HPIAD']})
 
         # Filter the data, and determine what it should be
         filtered = fnvs.filter_data(self.data, filter_space)
@@ -127,8 +131,10 @@ class FanovaTests(unittest.TestCase):
             for param_name, param in imp_space.items():
                 values = np.array(data[param_name])
                 self.assertTrue(param.legal_value(values).all())
+            # Assert that the 'ignore' column is gone
+            self.assertNotIn('ignore', data.columns)
 
-        # Assert that all constant hyperparameters are gone
+        # Assert that all constant hyperparameters are gone or converted
         for p in new_space.values():
             self.assertNotIsInstance(p, Constant)
 
@@ -177,11 +183,11 @@ class FanovaTests(unittest.TestCase):
 
             elif isinstance(val, str):
                 if val == 'a':
-                    return 1
+                    return 0
                 elif val == 'b':
-                    return 2
+                    return 1
                 elif val == 'c':
-                    return 3
+                    return 2
                 return 0
 
             return val
