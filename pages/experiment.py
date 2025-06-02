@@ -1,4 +1,5 @@
 import dash
+from dash.dash import no_update
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from ConfigSpace import ConfigurationSpace, Constant
@@ -408,20 +409,16 @@ config_content = html.Div([
                               dbc.Row([
                                             dbc.Col(html.Div(
                                                         dcc.Dropdown(id='hyperparameter_dd')
-                                                    ),width={'size':6,'offset':3}),
+                                                    ),width={'size':6,'offset':2}),
+                                            dbc.Col(
+                                                dbc.Button("reset hyperparameter", id='reset_hp',disabled=True,size='md',color='danger',outline=True),width=2
+                                            )
                                       ]),
                               html.Br(),
                               dbc.Row(id='range'),
                               html.Br(),
                               html.Center(
-                                  dbc.Button(
-                                      'Filter',
-                                      id='filter_button',
-                                      outline = True,
-                                      size = "lg",
-                                      color="primary",
-                                      className="mb-4",
-                                  )
+                                  dbc.Button('Filter',id='filter_button', outline = True,size = "lg",color="primary",className="mb-4")
                               ),
                               dbc.Row([
                                             dbc.Col(dash.dash_table.DataTable(id='runs_table',
@@ -445,7 +442,7 @@ config_content = html.Div([
                                                                                 'width' : '50%',
                                                                                 'height': '300px',
                                                                                 'overflowY': 'scroll'
-                                                                               })))
+                                                                               }))),
                           ])
 
 
@@ -490,19 +487,22 @@ def transform_cfg_space(cfg):
 
 @callback(
     Output(component_id='range', component_property='children'),
+    Output(component_id='reset_hp', component_property='disabled'),
+    Output(component_id='reset_hp',component_property='n_clicks'),
+    Input(component_id='reset_hp', component_property='n_clicks'),
     Input(component_id='hyperparameter_dd', component_property='value'),
     State(component_id='filtered_config', component_property='data'),
     State(component_id='raw_configspace', component_property='data'),
     State('log_scale_choice', 'data'),
     prevent_initial_call=True
 )
-def show_adequate_range(hyperparameter, filtered_config, raw_configspace, log_data):
+def show_adequate_range(clicks, hyperparameter, filtered_config, raw_configspace, log_data):
     if hyperparameter is None:
-        return None
+        return None, True, None
 
     raw_configspace = transform_cfg_space(raw_configspace)
 
-    if filtered_config is not None and hyperparameter in filtered_config.keys():
+    if filtered_config is not None and hyperparameter in filtered_config.keys() and clicks is None:
         hyperparameter_value = filtered_config[hyperparameter]
     else:
         hyperparameter_value = raw_configspace[hyperparameter]
@@ -510,54 +510,54 @@ def show_adequate_range(hyperparameter, filtered_config, raw_configspace, log_da
     log = log_data[hyperparameter] if hyperparameter in log_data.keys() else False
 
     if hyperparameter_value['type'] == 'uniform_float':
-        return(
-        dbc.Col(width=3),
+        return((
+        dbc.Col(width=2),
         dbc.Col(
                     html.Div("min:"),
                     width=1
                 ),
         dbc.Col(
-                    dbc.Input(type="text",id="min_float_value",value=str(hyperparameter_value['lower'])),
-                    width=2
+                    dbc.Input(type="text",id="min_float_value",value=str(hyperparameter_value['lower']), size='sm'),
+                    width=3
                 ),
         dbc.Col(
                     html.Div("max:"),
                     width=1
                 ),
         dbc.Col(
-                    dbc.Input(type="text",id="max_float_value",value=str(hyperparameter_value['upper']),
+                    dbc.Input(type="text",id="max_float_value",value=str(hyperparameter_value['upper']),size='sm',
                               pattern=r"([+-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+))"),
-                    width=2
+                    width=3
                 ),
-        dbc.Col(
+        html.Center(
                     dcc.Checklist(
-                        options=[{"label":"Use log scale","value":"log"}],
+                        options=[{"label":" Use log scale","value":"log"}],
                         value=['log'] if log else [],
                         id="log-scale-checkbox",
                         inline=True,
-                    ),
-                    width={"size":6, "offset":3}
+                        )
                 )
-        )
+        ), False, None)
     elif hyperparameter_value['type'] == 'uniform_int':
-        return(
-        dbc.Col(width=3),
+        return((
+        dbc.Col(width=2),
         dbc.Col(
                     html.Div("min:"),
                     width=1
                 ),
         dbc.Col(
-                    dbc.Input(type="number",id="min_int_value",value=hyperparameter_value['lower']),
-                    width=2
+                    dbc.Input(type="number",id="min_int_value",value=hyperparameter_value['lower'], size='sm'),
+                    width=3
                 ),
         dbc.Col(
                     html.Div("max:"),
                     width=1
                 ),
         dbc.Col(
-                    dbc.Input(type="number",id="max_int_value",value=hyperparameter_value['upper']),
-                    width=2
+                    dbc.Input(type="number",id="max_int_value",value=hyperparameter_value['upper'], size='sm'),
+                    width=3
                 ),
+<<<<<<< Updated upstream
         dbc.Col(
                     dcc.Checklist(
                         options=[{"label":"Use log scale","value":"log"}],
@@ -568,17 +568,20 @@ def show_adequate_range(hyperparameter, filtered_config, raw_configspace, log_da
                     width={"size":6, "offset":3}
                 )
         )
+=======
+        ),False, None)
+>>>>>>> Stashed changes
     elif hyperparameter_value['type'] == 'categorical':
-        return(
-        dbc.Col(width=3),
+        return((
+        dbc.Col(width=2),
         dbc.Col(
                     html.Div(dcc.Dropdown(raw_configspace[hyperparameter]['choices'],hyperparameter_value['choices'],multi=True, id='categories')),
-                    width=6
+                    width=8
                 ),
-        )
+        ),False, None)
     else:
         return None
-
+   
 
 @callback(
     Output(component_id='filtered_config_float', component_property='data'),
