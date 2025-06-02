@@ -234,7 +234,7 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
         raise PreventUpdate
 
     # TODO: eventually all of them, when done debugging
-    tasks = tasks[:10]
+    # tasks = tasks[:10]
 
     data = {}
 
@@ -386,7 +386,6 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, cfg_space, min_r
             results[task] = fnvs.run_fanova(selected_data,
                                             selected_space,
                                             0)
-        print(len(results[task]))
 
     results = pd.DataFrame.from_dict(results, orient='index')
 
@@ -435,7 +434,11 @@ config_content = html.Div([
                                                                               editable=False,
                                                                               cell_selectable=False,
                                                                               persistence=True,
-                                                                              persistence_type='session')),
+                                                                              persistence_type='session',
+                                                                              style_table={
+                                                                                'height': '300px',
+                                                                                'overflowY': 'scroll'
+                                                                               })),
                                             dbc.Col(dash.dash_table.DataTable(id='nan_table',
                                                                               editable=False,
                                                                               cell_selectable=False,
