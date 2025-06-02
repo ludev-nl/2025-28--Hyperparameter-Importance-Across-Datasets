@@ -202,6 +202,8 @@ def propagate_ids(data):
     Output("raw_configspace", 'data'),
     Output("raw_data_store", 'data'),
     Output("fetched_ids_local", "data"),
+    Output("fanova-warning", "is_open", allow_duplicate=True),
+    Output("fanova-warning", "children", allow_duplicate=True),
     Input("Fetch", "n_clicks"),
     State("Flow-input", "value"),
     State("suite_dropdown", "value"),
@@ -246,9 +248,14 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
             continue
         data[task] = fetcher.coerce_types(task_data)
 
+    if len(data) == 0:
+        return dash.no_update, dash.no_update, dash.no_update, True, 'This combination has no data.'
+
     return (fnvs.auto_configspace(data).to_serialized_dict(),
             Serverside(data),
-            {"flow_id": flow_id, "suite_id": suite_id}
+            {"flow_id": flow_id, "suite_id": suite_id},
+            False,
+            ""
     )
 
 
@@ -308,8 +315,8 @@ def toggle_buttons(data):
 
 @callback(
     Output("fanova_results_local", "data"),
-    Output("fanova-warning", "is_open"),
-    Output("fanova-warning", "children"),
+    Output("fanova-warning", "is_open", allow_duplicate=True),
+    Output("fanova-warning", "children", allow_duplicate=True),
     Input("fanova", "n_clicks"),
     State('raw_data_store', 'data'),
     State("filtered_data", "data"),
@@ -722,13 +729,6 @@ def update_global_results(data):
 fanova_content = html.Div([
     html.Br(),
     html.Div("Select at least two parameters to analyze (only those that are non-constant after filtering are presented):"),
-    dbc.Alert(
-        id="fanova-warning",
-        color="danger",
-        is_open=False
-        dismissable=True,
-        children=""
-    ),
     dcc.Dropdown(
         id='analysis_select',
         persistence=True,
@@ -863,6 +863,13 @@ layout = dbc.Container(
             ],
             id="tabs",
             active_tab="flow",
+        ),
+        dbc.Alert(
+            id="fanova-warning",
+            color="danger",
+            is_open=False,
+            dismissable=True,
+            children=""
         )
     ]
 )
@@ -897,7 +904,7 @@ def store_log_checkbox(value, cfg_space, param, log_data):
 def analysis_options(tab, raw_cfg, filtered_data):
     trigger = dash.callback_context.triggered_id
 
-    if trigger == 'tabs' and tab != 'fanova':
+    if trigger == 'tabs' and (tab != 'fanova' or raw_cfg is None):
         raise PreventUpdate
 
     if (trigger == 'raw_configspace'
