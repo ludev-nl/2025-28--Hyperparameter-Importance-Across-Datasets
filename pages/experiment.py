@@ -473,7 +473,7 @@ def table_formatting(min_runs, data):
 
 
 @callback(
-    Output(component_id='hyperparameter_dd', component_property='options'),
+    Output(component_id='hyperparameter_dd', component_property='options', allow_duplicate=True),
     Input(component_id='raw_configspace', component_property='data'),
     prevent_initial_call=True
 )
@@ -488,13 +488,14 @@ def transform_cfg_space(cfg):
 @callback(  
     Output(component_id='filtered_config', component_property='data', allow_duplicate=True),
     Output(component_id='range', component_property='children'),
+    Output(component_id='hyperparameter_dd', component_property='value', allow_duplicate=True),
     Input(component_id='reset_button', component_property='n_clicks'),
     State(component_id='raw_configspace', component_property='data'),
     prevent_initial_call=True
 )
 def reset_config_space(n_clicks, raw_configspace):
     raw_configspace = transform_cfg_space(raw_configspace)
-    return raw_configspace, None
+    return raw_configspace, None, []
       
 
 @callback(
