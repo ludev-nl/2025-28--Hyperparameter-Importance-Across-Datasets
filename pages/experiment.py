@@ -413,7 +413,7 @@ config_content = html.Div([
                                                         dcc.Dropdown(id='hyperparameter_dd')
                                                     ),width={'size':6,'offset':2}),
                                             dbc.Col(
-                                                dbc.Button("reset hyperparameter", id='reset_hp',disabled=True,size='md',color='danger',outline=True),width=2
+                                                dbc.Button("Reset Hyperparameter", id='reset_hp',disabled=True,size='md',color='danger',outline=True),width=2
                                             )
                                       ]),
                               html.Br(),
@@ -487,7 +487,7 @@ def update_param_dropdown(raw_configspace):
 def transform_cfg_space(cfg):
     return {p['name']: p for p in cfg['hyperparameters']}
 
-@callback(  
+@callback(
     Output(component_id='filtered_config', component_property='data', allow_duplicate=True),
     Output(component_id='range', component_property='children'),
     Output(component_id='hyperparameter_dd', component_property='value', allow_duplicate=True),
@@ -497,8 +497,8 @@ def transform_cfg_space(cfg):
 )
 def reset_config_space(n_clicks, raw_configspace):
     raw_configspace = transform_cfg_space(raw_configspace)
-    return raw_configspace, None, []
-      
+    return raw_configspace, None, None
+
 
 @callback(
     Output(component_id='range', component_property='children', allow_duplicate=True),
@@ -592,7 +592,7 @@ def show_adequate_range(clicks, hyperparameter, filtered_config, raw_configspace
         ),False, None)
     else:
         return None
-   
+
 
 @callback(
     Output(component_id='filtered_config', component_property='data', allow_duplicate=True),
