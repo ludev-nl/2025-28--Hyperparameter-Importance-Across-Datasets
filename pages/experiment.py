@@ -308,6 +308,8 @@ def toggle_buttons(data):
 
 @callback(
     Output("fanova_results_local", "data"),
+    Output("fanova-warning", "is_open"),
+    Output("fanova-warning", "children"),
     Input("fanova", "n_clicks"),
     State('raw_data_store', 'data'),
     State("filtered_data", "data"),
@@ -332,12 +334,12 @@ def toggle_buttons(data):
 )
 def run_fanova(set_progress, n_clicks, raw_data, filtered_data, cfg_space, min_runs, log_data, param_selection, toggle_pairs, n_pairs, n_bins):
     if raw_data is None and filtered_data is None:
-        # TODO: display warning that there is no data to perform fanova on
-        raise PreventUpdate
+        #display warning that there is no data to perform fanova on
+        return dash.no_update, True, "No data available to run fANOVA."
 
     if param_selection is None or len(param_selection) < 2:
-        # TODO: display warning that for relative importance, at least two parameters should be selected for analysis
-        raise PreventUpdate
+        #display warning that for relative importance, at least two parameters should be selected for analysis
+        return dash.no_update, True, "Please select at least two parameters for analysis."
 
     data = filtered_data if (filtered_data is not None and len(filtered_data) != 0) else raw_data
     cfg_space = ConfigurationSpace.from_serialized_dict(cfg_space)
@@ -386,7 +388,7 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, cfg_space, min_r
         avg_ranks = pairwise.rank(axis=1).mean(axis=0).sort_values(ascending=False).index
         results = results.drop(columns=avg_ranks[n_pairs:])
 
-    return results.to_json()
+    return results.to_json(), False, ""
 
 
 config_content = html.Div([
@@ -720,6 +722,13 @@ def update_global_results(data):
 fanova_content = html.Div([
     html.Br(),
     html.Div("Select at least two parameters to analyze (only those that are non-constant after filtering are presented):"),
+    dbc.Alert(
+        id="fanova-warning",
+        color="danger",
+        is_open=False
+        dismissable=True,
+        children=""
+    ),
     dcc.Dropdown(
         id='analysis_select',
         persistence=True,
