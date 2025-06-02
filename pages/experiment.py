@@ -417,9 +417,10 @@ config_content = html.Div([
                               html.Br(),
                               dbc.Row(id='range'),
                               html.Br(),
-                              html.Center(
-                                  dbc.Button('Filter',id='filter_button', outline = True,size = "lg",color="primary",className="mb-4")
-                              ),
+                              dbc.Row([
+                                  dbc.Col(dbc.Button('Filter',id='filter_button', outline = True,size = "lg",color="primary",className="mb-4"), width={'offset':4, 'size':2}),
+                                  dbc.Col(dbc.Button('Reset Space',id='reset_button', outline = True,size = "lg",color="danger",className="mb-4"), width={'size':2}),
+                                  ]),
                               dbc.Row([
                                             dbc.Col(dash.dash_table.DataTable(id='runs_table',
                                                                               editable=False,
@@ -484,9 +485,20 @@ def update_param_dropdown(raw_configspace):
 def transform_cfg_space(cfg):
     return {p['name']: p for p in cfg['hyperparameters']}
 
+@callback(  
+    Output(component_id='filtered_config', component_property='data', allow_duplicate=True),
+    Output(component_id='range', component_property='children'),
+    Input(component_id='reset_button', component_property='n_clicks'),
+    State(component_id='raw_configspace', component_property='data'),
+    prevent_initial_call=True
+)
+def reset_config_space(n_clicks, raw_configspace):
+    raw_configspace = transform_cfg_space(raw_configspace)
+    return raw_configspace, None
+      
 
 @callback(
-    Output(component_id='range', component_property='children'),
+    Output(component_id='range', component_property='children', allow_duplicate=True),
     Output(component_id='reset_hp', component_property='disabled'),
     Output(component_id='reset_hp',component_property='n_clicks'),
     Input(component_id='reset_hp', component_property='n_clicks'),
@@ -557,7 +569,6 @@ def show_adequate_range(clicks, hyperparameter, filtered_config, raw_configspace
                     dbc.Input(type="number",id="max_int_value",value=hyperparameter_value['upper'], size='sm'),
                     width=3
                 ),
-<<<<<<< Updated upstream
         dbc.Col(
                     dcc.Checklist(
                         options=[{"label":"Use log scale","value":"log"}],
@@ -567,10 +578,7 @@ def show_adequate_range(clicks, hyperparameter, filtered_config, raw_configspace
                     ),
                     width={"size":6, "offset":3}
                 )
-        )
-=======
         ),False, None)
->>>>>>> Stashed changes
     elif hyperparameter_value['type'] == 'categorical':
         return((
         dbc.Col(width=2),
@@ -584,94 +592,74 @@ def show_adequate_range(clicks, hyperparameter, filtered_config, raw_configspace
    
 
 @callback(
-    Output(component_id='filtered_config_float', component_property='data'),
+    Output(component_id='filtered_config', component_property='data', allow_duplicate=True),
     Input(component_id='min_float_value', component_property='value'),
     Input(component_id='max_float_value', component_property='value'),
-    Input(component_id='raw_configspace', component_property='data'),
+    State(component_id='raw_configspace', component_property='data'),
     State(component_id='hyperparameter_dd', component_property='value'),
-    State(component_id='filtered_config_float', component_property='data'),
+    State(component_id='filtered_config', component_property='data'),
     prevent_initial_call=True
 )
-def update_float_range_hyperparameter(min_float_value,max_float_value,raw_configspace,hyperparameter,filtered_config_float):
-    if dash.callback_context.triggered_id == 'raw_configspace':
-        return None
+def update_float_range_hyperparameter(min_float_value,max_float_value,raw_configspace,hyperparameter,filtered_config):
 
     raw_configspace = transform_cfg_space(raw_configspace)
 
-    if filtered_config_float is None:
-        filtered_config_float = {}
+    if filtered_config is None:
+        filtered_config = {}
     if (float(min_float_value) == raw_configspace[hyperparameter]['lower']) and (float(max_float_value) == raw_configspace[hyperparameter]['upper']):
-        if hyperparameter in filtered_config_float.keys():
-            del filtered_config_float[hyperparameter]
-        return filtered_config_float
-    filtered_config_float[hyperparameter] = {'type': 'uniform_float',
+        if hyperparameter in filtered_config.keys():
+            del filtered_config[hyperparameter]
+        return filtered_config
+    filtered_config[hyperparameter] = {'type': 'uniform_float',
                                              'name': raw_configspace[hyperparameter]['name'],
                                              'lower': float(min_float_value),
                                              'upper': float(max_float_value)}
 
-    return filtered_config_float
+    return filtered_config
 
 @callback(
-    Output(component_id='filtered_config_int', component_property='data'),
+    Output(component_id='filtered_config', component_property='data', allow_duplicate=True),
     Input(component_id='min_int_value', component_property='value'),
     Input(component_id='max_int_value', component_property='value'),
-    Input(component_id='raw_configspace', component_property='data'),
+    State(component_id='raw_configspace', component_property='data'),
     State(component_id='hyperparameter_dd', component_property='value'),
-    State(component_id='filtered_config_int', component_property='data'),
+    State(component_id='filtered_config', component_property='data'),
     prevent_initial_call=True
 )
-def update_int_range_hyperparameter(min_int_value,max_int_value,raw_configspace,hyperparameter,filtered_config_int):
-    if dash.callback_context.triggered_id == 'raw_configspace':
-        return None
+def update_int_range_hyperparameter(min_int_value,max_int_value,raw_configspace,hyperparameter,filtered_config):
 
     raw_configspace = transform_cfg_space(raw_configspace)
 
-    if filtered_config_int is None:
-        filtered_config_int = {}
+    if filtered_config is None:
+        filtered_config = {}
     if (min_int_value == raw_configspace[hyperparameter]['lower']) and (max_int_value == raw_configspace[hyperparameter]['upper']):
-        if hyperparameter in filtered_config_int.keys():
-            del filtered_config_int[hyperparameter]
-        return filtered_config_int
+        if hyperparameter in filtered_config.keys():
+            del filtered_config[hyperparameter]
+        return filtered_config
     else:
-        filtered_config_int[hyperparameter] = {'type': 'uniform_int', 'name': raw_configspace[hyperparameter]['name'], 'lower': min_int_value, 'upper': max_int_value}
-        return filtered_config_int
+        filtered_config[hyperparameter] = {'type': 'uniform_int', 'name': raw_configspace[hyperparameter]['name'], 'lower': min_int_value, 'upper': max_int_value}
+        return filtered_config
 
 @callback(
-    Output(component_id='filtered_config_cat', component_property='data'),
+    Output(component_id='filtered_config', component_property='data', allow_duplicate=True),
     Input(component_id='categories', component_property='value'),
-    Input(component_id='raw_configspace', component_property='data'),
+    State(component_id='raw_configspace', component_property='data'),
     State(component_id='hyperparameter_dd', component_property='value'),
-    State(component_id='filtered_config_cat', component_property='data'),
+    State(component_id='filtered_config', component_property='data'),
     prevent_initial_call=True
 )
-def update_categorical_hyperparameter(categories, raw_configspace, hyperparameter, filtered_config_cat):
-    if dash.callback_context.triggered_id == 'raw_configspace':
-        return None
+def update_categorical_hyperparameter(categories, raw_configspace, hyperparameter, filtered_config):
 
     raw_configspace = transform_cfg_space(raw_configspace)
 
-    if filtered_config_cat is None:
-        filtered_config_cat = {}
+    if filtered_config is None:
+        filtered_config = {}
     if (set(categories) == set(raw_configspace[hyperparameter]['choices'])):
-        if hyperparameter in filtered_config_cat.keys():
-            del filtered_config_cat[hyperparameter]
-        return filtered_config_cat
-    filtered_config_cat[hyperparameter] = {'type': 'categorical', 'name': raw_configspace[hyperparameter]['name'], 'choices': categories}
-    return filtered_config_cat
-
-@callback(
-    Output(component_id='filtered_config', component_property='data'),
-    Input(component_id='filtered_config_int', component_property='data'),
-    Input(component_id='filtered_config_float', component_property='data'),
-    Input(component_id='filtered_config_cat', component_property='data'),
-    prevent_initial_call=True
-)
-def concat_filtered(filtered_config_int, filtered_config_float, filtered_config_cat):
-    dict = {}
-    for config in (filtered_config_int,filtered_config_float,filtered_config_cat):
-        if config is not None:
-            dict.update(config)
-    return dict
+        if hyperparameter in filtered_config.keys():
+            del filtered_config[hyperparameter]
+        return filtered_config
+    filtered_config[hyperparameter] = {'type': 'categorical', 'name': raw_configspace[hyperparameter]['name'], 'choices': categories}
+    return filtered_config
 
 @callback(
     Output(component_id='filtered_data', component_property='data'),
