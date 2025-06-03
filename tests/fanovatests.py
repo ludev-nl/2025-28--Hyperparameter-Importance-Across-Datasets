@@ -6,7 +6,7 @@ from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, Constant,
 from ConfigSpace.hyperparameters import NumericalHyperparameter
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
-import fanovaservice as fnvs
+import backend.fanovaservice as fnvs
 
 # The configspace used to generate data
 # Those labeled 'full' have no missing values

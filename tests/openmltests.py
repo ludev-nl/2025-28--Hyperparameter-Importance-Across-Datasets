@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 
-import openmlfetcher as omlf
+import backend.openmlfetcher as omlf
 
 
 suite_id = 99

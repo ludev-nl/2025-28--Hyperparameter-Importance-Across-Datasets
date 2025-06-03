@@ -241,9 +241,7 @@ def run_fanova(task_data: pd.DataFrame,
         result[param_name] = score['individual importance']
 
     if n_pairs > 0:
-        print(n_pairs)
         pairs = fnv.get_most_important_pairwise_marginals(n=n_pairs)
-
         result.update({name[0]+'_-_'+name[1]: importance
                        for name, importance in pairs.items()})
 

@@ -1,5 +1,5 @@
 import dash
-from dash import html, dcc
+from dash import html
 import dash_bootstrap_components as dbc
 
 #Registers this file as the homepage

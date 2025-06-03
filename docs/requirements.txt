@@ -8,7 +8,7 @@ plotly
 scikit-posthocs
 
 # For development server
-diskcache
+dash[diskcache]
 
 # For deployment server
 celery[redis]

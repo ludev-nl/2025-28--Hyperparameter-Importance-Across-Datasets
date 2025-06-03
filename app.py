@@ -2,7 +2,7 @@ import dash
 from dash import DiskcacheManager, CeleryManager
 import dash_bootstrap_components as dbc
 from dash_extensions.enrich import DashProxy, ServersideOutputTransform, Input, Output, dcc, html, Serverside, callback
-from openmlfetcher import fetch_flows, fetch_suites
+from backend.openmlfetcher import fetch_flows, fetch_suites
 import sys
 
 
@@ -120,6 +120,9 @@ def load_flows(id):
     options_df['id_str'] = options_df.index.astype(str)
 
     suites_df = fetch_suites()
+
+    if options_df is None or suites_df is None:
+        raise dash.exceptions.PreventUpdate
 
     return Serverside(options_df), Serverside(suites_df)
 

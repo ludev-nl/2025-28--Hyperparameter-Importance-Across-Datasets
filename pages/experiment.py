@@ -13,10 +13,10 @@ import io
 import zipfile
 
 # Add the utils directory to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'openmlfetcher')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import openmlfetcher as fetcher
-import fanovaservice as fnvs
+import backend.openmlfetcher as fetcher
+import backend.fanovaservice as fnvs
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 dash.register_page(__name__, path='/experiment')
@@ -28,7 +28,6 @@ def df_to_dict_list(df, col):
             for id, row in df.iterrows()]
 
 flow_content = html.Div([
-    # html.H1("This is the flow tab", className="mb-4"),
                             html.Br(),
                             dbc.Row([
                                         dbc.Col(html.Div("Flow Selection:"))
