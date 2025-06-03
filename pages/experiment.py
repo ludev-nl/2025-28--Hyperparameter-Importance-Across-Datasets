@@ -389,7 +389,7 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data, cfg_space, min_r
 
     results = pd.DataFrame.from_dict(results, orient='index')
 
-    if 'pairwise' in toggle_pairs:
+    if 'pairwise' in toggle_pairs and n_pairs < total_pairs:
         pairwise = results.iloc[:,n:]
         avg_ranks = pairwise.rank(axis=1).mean(axis=0).sort_values(ascending=False).index
         results = results.drop(columns=avg_ranks[n_pairs:])

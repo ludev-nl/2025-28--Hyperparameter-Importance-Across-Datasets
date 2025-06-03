@@ -1,17 +1,16 @@
 # Core dependencies
 git+https://github.com/automl/fanova@master
 openml
-dash[diskcache]
+dash
 dash_bootstrap_components
 dash_extensions
 plotly
 scikit-posthocs
 
-# Deployment dependencies
+# For development server
+diskcache
+
+# For deployment server
 celery[redis]
 gunicorn
 supervisor
-
-# Testing dependencies
-flake8
-mypy
