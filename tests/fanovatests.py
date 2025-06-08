@@ -80,8 +80,6 @@ class FanovaTests(unittest.TestCase):
         # Check that all hyperparams are as they should be
         for param_name, correct_param in correct.items():
             auto_param = created[param_name]
-            if type(auto_param) is type(correct_param):
-                print(param_name)
             self.assertEqual(type(auto_param), type(correct_param))
 
             # We do not care about the order of categoricals

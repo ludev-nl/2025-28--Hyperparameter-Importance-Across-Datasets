@@ -54,7 +54,7 @@ jobs:
 
       - run: pip install -r docs/deploy.txt -r docs/test.txt
 
-      - run: python3 -m mypy --disable-error-code import-untyped openmlfetcher.py fanovaservice.py visualiser.py
+      - run: python3 -m mypy --disable-error-code import-untyped backend/*.py
 
   unit_tests:
     needs: type_check
