@@ -37,12 +37,12 @@ layout = dbc.Container([
             [
                 html.H3("How To Use The Web App"),
                 html.Ol([
-                    html.Li("Go to the \"Experiment\" tab to select the flows an"
-                            "d suites you wish to analyze."),
+                    html.Li("Go to the \"Experiment\" tab to select the flows "
+                            "and suites you wish to analyze."),
                     html.Li("Configure your hyperparameter setting and filter "
                             "the options as needed."),
-                    html.Li("Click the \"Run Fanova\" button to execute the hype"
-                            "rparameter importance analysis."),
+                    html.Li("Click the \"Run Fanova\" button to execute the "
+                            "hyperparameter importance analysis."),
                     html.Li("Review the visualizations on the results page to "
                             "understand which parameters impact performance."),
                     html.Li("Download CSV files of the results for further inv"
