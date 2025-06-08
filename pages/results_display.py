@@ -8,6 +8,7 @@ from io import StringIO
 dash.register_page(__name__, path="/results")
 
 
+# responsible for displaying the plots
 @callback(
     Output("violin-plot", "figure"),
     Output("critical-distance-plot", "src"),
@@ -59,6 +60,7 @@ layout = dbc.Container([
 ], fluid=True)
 
 
+# responsible for enabling/disabling the download button if ther is/nt data
 @callback(
     Output("export_csv_button", "disabled"),
     Input("fanova_results", "data"),
@@ -68,6 +70,7 @@ def toggle_download_button(data):
     return data is None
 
 
+# handles the download of the fanova results by the client
 @callback(
     Output("download-fanovaresults-csv", "data"),
     Input("export_csv_button", "n_clicks"),
