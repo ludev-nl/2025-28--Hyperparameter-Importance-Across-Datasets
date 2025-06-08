@@ -66,7 +66,7 @@ app = DashProxy(__name__,
                 background_callback_manager=manager,
                 transforms=[ServersideOutputTransform([backend])])
 
-
+# specify styles for dbc
 SIDEBAR_STYLE = {
     "position": "fixed",
     "top": 0,
@@ -101,8 +101,10 @@ sidebar = html.Div(
     style=SIDEBAR_STYLE,
 )
 
+# content is the entry point for the other pages
 content = html.Div(dash.page_container, style=CONTENT_STYLE)
 
+# the app layout, with store components, sidebar, and content (pages)
 app.layout = html.Div([
     # store elements that can be used to store the data over pages
     # storage_type is used to specify how long the data is stored for.
