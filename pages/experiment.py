@@ -129,6 +129,7 @@ flow_content = html.Div([
                 ])
 
 
+# if the flows are fetched, the placeholder text will be replaced
 @callback(
     Output('Flow-input', 'placeholder'),
     Input('flows', 'data'),
@@ -140,6 +141,7 @@ def swap_placeholder(data):
     return 'Search tokens should be at least 3 characters...'
 
 
+# if the suites are fetched, the dropdown will be populated
 @callback(
     Output('suite_dropdown', 'options'),
     Output('suite_dropdown', 'placeholder'),
@@ -188,6 +190,9 @@ def update_multi_options(search_value, flows, val):
     return lst[:100]
 
 
+# propagate local fetched ids to global (app.py) store.
+# necessary because outputting to global store directly
+# breaks prevent initial call
 @callback(
     Output('fetched_ids', 'data'),
     Input('fetched_ids_local', 'data'),
@@ -299,6 +304,7 @@ def download_raw_data(n_clicks, raw_data, fetched_ids):
                           filename=f"openml_f{flow_id}_s{suite_id}.zip")
 
 
+# enable fetch button if flow and suite are specified
 @callback(
     Output('Fetch', 'disabled'),
     Input("Flow-input", "value"),
@@ -309,6 +315,7 @@ def toggle_fetch_button(val1, val2):
     return val1 is None or val2 is None
 
 
+# disable/enable download and analysis buttons based on data availability
 @callback(
     Output('fanova', 'disabled'),
     Output('csv', 'disabled'),
@@ -498,7 +505,7 @@ config_content = html.Div([
     ])
 
 
-# callback and fuction to display the table with the ammount of runs/experiment
+# turn tasks' run table cells red if they do not have enough runs
 @callback(
     Output('runs_table', 'style_data_conditional'),
     Input('min_runs', 'value'),
@@ -728,7 +735,7 @@ def update_int_range_hyperparameter(min_int_value, max_int_value,
 
     if filtered_config is None:
         filtered_config = {}
-    # if the range is the same as the original, we delete the information abt
+    # if the range is the same as the original, we delete the information about
     # this hyperparameter
     if ((min_int_value == raw_configspace[hyperparameter]['lower']) and
             (max_int_value == raw_configspace[hyperparameter]['upper'])):
