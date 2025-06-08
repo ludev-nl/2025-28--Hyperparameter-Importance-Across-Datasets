@@ -36,7 +36,7 @@ flow_content = html.Div([
                             ]),
                     dbc.Row([
                         dbc.Col(html.Div(
-                            dcc.Dropdown(id="Flow-input",
+                            dcc.Dropdown(id="flow_input",
                                          persistence=True,
                                          persistence_type="session",
                                          placeholder=("Please wait "
@@ -131,7 +131,7 @@ flow_content = html.Div([
 
 # if the flows are fetched, the placeholder text will be replaced
 @callback(
-    Output("Flow-input", "placeholder"),
+    Output("flow_input", "placeholder"),
     Input("flows", "data"),
     prevent_initial_call=False
 )
@@ -154,10 +154,10 @@ def update_suites(suites):
 
 # Callback for the flow selection dropdown menu
 @callback(
-    Output("Flow-input", "options"),
-    Input("Flow-input", "search_value"),
+    Output("flow_input", "options"),
+    Input("flow_input", "search_value"),
     Input("flows", "data"),
-    State("Flow-input", "value"),
+    State("flow_input", "value"),
     prevent_initial_call=False
 )
 def update_multi_options(search_value, flows, val):
@@ -207,10 +207,10 @@ def propagate_ids(data):
     Output("raw_configspace", "data"),
     Output("raw_data_store", "data"),
     Output("fetched_ids_local", "data"),
-    Output("fanova-warning", "is_open", allow_duplicate=True),
-    Output("fanova-warning", "children", allow_duplicate=True),
+    Output("experiment_warning", "is_open", allow_duplicate=True),
+    Output("experiment_warning", "children", allow_duplicate=True),
     Input("Fetch", "n_clicks"),
-    State("Flow-input", "value"),
+    State("flow_input", "value"),
     State("suite_dropdown", "value"),
     State("max_runs_per_task", "value"),
     prevent_initial_call=True,
@@ -307,7 +307,7 @@ def download_raw_data(n_clicks, raw_data, fetched_ids):
 # enable fetch button if flow and suite are specified
 @callback(
     Output("Fetch", "disabled"),
-    Input("Flow-input", "value"),
+    Input("flow_input", "value"),
     Input("suite_dropdown", "value"),
     prevent_initial_call=False
 )
@@ -329,8 +329,8 @@ def toggle_buttons(data):
 # run fanova analysis on the fetched data
 @callback(
     Output("fanova_results_local", "data"),
-    Output("fanova-warning", "is_open", allow_duplicate=True),
-    Output("fanova-warning", "children", allow_duplicate=True),
+    Output("experiment_warning", "is_open", allow_duplicate=True),
+    Output("experiment_warning", "children", allow_duplicate=True),
     Input("fanova", "n_clicks"),
     State("raw_data_store", "data"),
     State("filtered_data", "data"),
@@ -627,7 +627,7 @@ def show_adequate_range(clicks, hyperparameter, filtered_config,
              dcc.Checklist(
                      options=[{"label": " Use log scale", "value": "log"}],
                      value=["log"] if log else [],
-                     id="log-scale-checkbox",
+                     id="log_scale_checkbox",
                      inline=True,
                      )
              )
@@ -657,7 +657,7 @@ def show_adequate_range(clicks, hyperparameter, filtered_config,
                      dcc.Checklist(
                          options=[{"label": "Use log scale", "value": "log"}],
                          value=["log"] if log else [],
-                         id="log-scale-checkbox",
+                         id="log_scale_checkbox",
                          inline=True,
                      ),
                      width={"size": 6, "offset": 3}
@@ -1008,7 +1008,7 @@ layout = dbc.Container(
         html.H1("Experiment Setup"),
         dcc.Markdown("\n1. Choose which flow and suite you want to analyze."
                      "Click the fetch button to fetch their data.\n"
-                     "2. Filter your configuration space by selecting which"
+                     "2. Filter your configuration space by selecting which "
                      "hyperparameter configurations should be included. By "
                      "default, all configurations are included.\n"
                      "3. Select which parameters to analyze, and configure "
@@ -1026,7 +1026,7 @@ layout = dbc.Container(
             active_tab="flow",
         ),
         dbc.Alert(
-            id="fanova-warning",
+            id="experiment_warning",
             color="danger",
             is_open=False,
             dismissable=True,
@@ -1039,7 +1039,7 @@ layout = dbc.Container(
 # updates which parameters the user wants to be treated in logscale by fanova
 @callback(
     Output("log_scale_choice", "data"),
-    Input("log-scale-checkbox", "value"),
+    Input("log_scale_checkbox", "value"),
     Input("raw_configspace", "data"),
     State(component_id="hyperparameter_dd", component_property="value"),
     State("log_scale_choice", "data"),

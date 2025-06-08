@@ -10,8 +10,8 @@ dash.register_page(__name__, path="/results")
 
 # responsible for displaying the plots
 @callback(
-    Output("violin-plot", "figure"),
-    Output("critical-distance-plot", "src"),
+    Output("violin_plot", "figure"),
+    Output("critical_distance_img", "src"),
     Input("fanova_results", "data"),
 )
 def display_results(fanova_results):
@@ -32,7 +32,7 @@ layout = dbc.Container([
         dbc.Col([
             html.Center(html.H3("Violin Plot",
                                 style={"marginBottom": "20px"})),
-            dcc.Graph(id="violin-plot"),
+            dcc.Graph(id="violin_plot"),
         ], width={"offset": 2, "size": 8})
     ]),
 
@@ -40,7 +40,7 @@ layout = dbc.Container([
         dbc.Col([
             html.Center(html.H3("Critical Difference Plot",
                                 style={"marginBottom": "20px"})),
-            html.Img(id="critical-distance-plot"),
+            html.Img(id="critical_distance_img"),
         ], width={"offset": 2, "size": 8})
     ]),
 
