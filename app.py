@@ -29,7 +29,7 @@ if deploy:
     host = 'localhost'
     port = 6379
     db = 0
-    cache_expiry = 24 * 60 * 60 # cache for 24 hours
+    cache_expiry = 24 * 60 * 60  # cache for 24 hours
 
     redis_url = 'redis://' + host + ':' + str(port) + '/' + str(db)
     redis_inst = StrictRedis.from_url(redis_url)
