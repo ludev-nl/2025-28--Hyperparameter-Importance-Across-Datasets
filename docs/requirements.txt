@@ -1,0 +1,16 @@
+# Core dependencies
+git+https://github.com/automl/fanova@master
+openml
+dash
+dash_bootstrap_components
+dash_extensions
+plotly
+scikit-posthocs
+
+# For development server
+dash[diskcache]
+
+# For deployment server
+celery[redis]
+gunicorn
+supervisor

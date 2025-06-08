@@ -1,5 +1,8 @@
-__pycache__/
-tests/__pycache__
 .coverage
+__pycache__/
 openml_f*_s*/
 fanova_f*_s*.csv
+cache/
+file_system_backend/
+supervisord.log
+supervisord.pid

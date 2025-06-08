@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 
-import openmlfetcher as omlf
+import backend.openmlfetcher as omlf
 
 
 suite_id = 99
@@ -24,7 +24,7 @@ class OpenMLTests(unittest.TestCase):
         self.assertIsInstance(flows, pd.DataFrame)
         # Check the columns are correct, and that there are at least as
         # many as at the time of development
-        self.assertListEqual(list(flows.columns), ['name', 'version'])
+        self.assertListEqual(list(flows.columns), ['full_name'])
         self.assertGreaterEqual(len(flows), 46546)
 
     def test_suites(self):
