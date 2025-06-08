@@ -263,6 +263,7 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
             ""
             )
 
+
 # handles client download of raw data when button is clicked
 @callback(
     Output("download_raw_data", 'data'),
@@ -575,6 +576,8 @@ def show_adequate_range(clicks, hyperparameter, filtered_config,
 
     raw_configspace = transform_cfg_space(raw_configspace)
 
+    # in case we already started filtering we take the hyperp
+    # range from the filtered configspace, else from the raw one
     if (filtered_config is not None and
             hyperparameter in filtered_config.keys() and
             clicks is None):
@@ -586,6 +589,7 @@ def show_adequate_range(clicks, hyperparameter, filtered_config,
            if hyperparameter in log_data.keys()
            else False)
 
+    # we display widgets to select the range based on the hyperp type
     if hyperparameter_value['type'] == 'uniform_float':
         return (
             (dbc.Col(width=2),
@@ -683,12 +687,15 @@ def update_float_range_hyperparameter(min_float_value, max_float_value,
 
     if filtered_config is None:
         filtered_config = {}
+    # if the range is the same as the original, we delete the information abt
+    # this hyperparameter
     if (float(min_float_value) == raw_configspace[hyperparameter]['lower'] and
             (float(max_float_value) ==
                 raw_configspace[hyperparameter]['upper'])):
         if hyperparameter in filtered_config.keys():
             del filtered_config[hyperparameter]
         return filtered_config
+    # otherwise we update the filtered config info with the current information
     filtered_config[hyperparameter] = (
           {'type': 'uniform_float',
            'name': raw_configspace[hyperparameter]['name'],
@@ -718,11 +725,14 @@ def update_int_range_hyperparameter(min_int_value, max_int_value,
 
     if filtered_config is None:
         filtered_config = {}
+    # if the range is the same as the original, we delete the information abt
+    # this hyperparameter
     if ((min_int_value == raw_configspace[hyperparameter]['lower']) and
             (max_int_value == raw_configspace[hyperparameter]['upper'])):
         if hyperparameter in filtered_config.keys():
             del filtered_config[hyperparameter]
         return filtered_config
+    # otherwise we update the filtered config info with the current information
     else:
         filtered_config[hyperparameter] = (
             {'type': 'uniform_int',
@@ -747,12 +757,15 @@ def update_categorical_hyperparameter(categories, raw_configspace,
 
     raw_configspace = transform_cfg_space(raw_configspace)
 
+    # if the range is the same as the original, we delete the information abt
+    # this hyperparameter
     if filtered_config is None:
         filtered_config = {}
     if (set(categories) == set(raw_configspace[hyperparameter]['choices'])):
         if hyperparameter in filtered_config.keys():
             del filtered_config[hyperparameter]
         return filtered_config
+    # otherwise we update the filtered config info with the current information
     filtered_config[hyperparameter] = (
         {'type': 'categorical',
          'name': raw_configspace[hyperparameter]['name'],
@@ -981,6 +994,7 @@ layout = dbc.Container(
 )
 
 
+# updates which parameters the user wants to be treated in logscale by fanova
 @callback(
     Output("log_scale_choice", "data"),
     Input("log-scale-checkbox", "value"),
