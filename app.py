@@ -14,9 +14,9 @@ from backend.openmlfetcher import fetch_flows, fetch_suites
 import sys
 
 
-debug = 'debug' in sys.argv
-deploy = ('gunicorn' in sys.argv[0]
-          or 'celery' in sys.argv[0])
+debug = "debug" in sys.argv
+deploy = ("gunicorn" in sys.argv[0]
+          or "celery" in sys.argv[0])
 
 
 if deploy:
@@ -26,22 +26,22 @@ if deploy:
     from redis.exceptions import ConnectionError
 
     # Redis configuration
-    host = 'localhost'
+    host = "localhost"
     port = 6379
     db = 0
     cache_expiry = 24 * 60 * 60  # cache for 24 hours
 
-    redis_url = 'redis://' + host + ':' + str(port) + '/' + str(db)
+    redis_url = "redis://" + host + ":" + str(port) + "/" + str(db)
     redis_inst = StrictRedis.from_url(redis_url)
 
     # Check if the Redis backend is active
     try:
         redis_inst.ping()
     except ConnectionError:
-        sys.stderr.write('Make sure you have a Redis server running.')
+        sys.stderr.write("Make sure you have a Redis server running.")
         sys.exit()
 
-    # Configure the redis backend for Celery's job queue
+    # Configure the redis backend for Celery"s job queue
     celery_app = Celery(__name__, backend=redis_url, broker=redis_url)
     manager = CeleryManager(celery_app, cache_by=(lambda: 0))
     rb = manager.handle.backend.expires = cache_expiry
@@ -112,8 +112,8 @@ app.layout = html.Div([
 
     dcc.Store(id="fanova_results", storage_type="session", data=None),
     dcc.Store(id="fetched_ids", storage_type="session", data=None),
-    dcc.Store(id='flows', storage_type='session', data=None),
-    dcc.Store(id='suites', storage_type='session', data=None),
+    dcc.Store(id="flows", storage_type="session", data=None),
+    dcc.Store(id="suites", storage_type="session", data=None),
     dcc.Location(id="url"),
     sidebar,
     content
@@ -122,16 +122,16 @@ app.layout = html.Div([
 
 # fetches the available flows and suites from OpenML
 @callback(
-    Output('flows', 'data'),
-    Output('suites', 'data'),
-    Input('flows', 'id'),
+    Output("flows", "data"),
+    Output("suites", "data"),
+    Input("flows", "id"),
     background=True,
     prevent_initial_call=False,
     cache_args_to_ignore=[0]
 )
 def load_flows_suites(id):
     options_df = fetch_flows()
-    options_df['id_str'] = options_df.index.astype(str)
+    options_df["id_str"] = options_df.index.astype(str)
 
     suites_df = fetch_suites()
 
@@ -143,12 +143,12 @@ def load_flows_suites(id):
 
 
 # For deployment we need to register tasks manually and create
-# the 'server' object gunicorn needs
+# the "server" object gunicorn needs
 if deploy:
     app.register_celery_tasks()
     server = app.server
 
 # This is for development
 if __name__ == "__main__":
-    debug = 'debug' in sys.argv
+    debug = "debug" in sys.argv
     app.run(port=8888, debug=debug)

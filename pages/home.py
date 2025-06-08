@@ -3,7 +3,7 @@ from dash import html
 import dash_bootstrap_components as dbc
 
 # Registers this file as the homepage
-dash.register_page(__name__, path='/')
+dash.register_page(__name__, path="/")
 
 # Layout for the homepage
 layout = dbc.Container([
@@ -37,11 +37,11 @@ layout = dbc.Container([
             [
                 html.H3("How To Use The Web App"),
                 html.Ol([
-                    html.Li("Go to the 'Experiment' tab to select the flows an"
+                    html.Li("Go to the \"Experiment\" tab to select the flows an"
                             "d suites you wish to analyze."),
                     html.Li("Configure your hyperparameter setting and filter "
                             "the options as needed."),
-                    html.Li("Click the 'Run Fanova' button to execute the hype"
+                    html.Li("Click the \"Run Fanova\" button to execute the hype"
                             "rparameter importance analysis."),
                     html.Li("Review the visualizations on the results page to "
                             "understand which parameters impact performance."),

@@ -5,7 +5,7 @@ import backend.visualiser as vis
 from pandas import read_json
 from io import StringIO
 
-dash.register_page(__name__, path='/results')
+dash.register_page(__name__, path="/results")
 
 
 @callback(
@@ -29,39 +29,39 @@ layout = dbc.Container([
     # dcc.Store(id="fetched_ids", storage_type="session"),
     dbc.Row([
         dbc.Col([
-            html.Center(html.H3('Violin Plot',
+            html.Center(html.H3("Violin Plot",
                                 style={"marginBottom": "20px"})),
-            dcc.Graph(id='violin-plot'),
-        ], width={'offset': 2, 'size': 8})
+            dcc.Graph(id="violin-plot"),
+        ], width={"offset": 2, "size": 8})
     ]),
 
     dbc.Row([
         dbc.Col([
-            html.Center(html.H3('Critical Difference Plot',
+            html.Center(html.H3("Critical Difference Plot",
                                 style={"marginBottom": "20px"})),
-            html.Img(id='critical-distance-plot'),
-        ], width={'offset': 2, 'size': 8})
+            html.Img(id="critical-distance-plot"),
+        ], width={"offset": 2, "size": 8})
     ]),
 
     html.Div([
         dbc.Button(
-            'Export csv',
+            "Export csv",
             disabled=True,
-            color='primary',
-            id='export_csv_button',
-            className='mb-1',
-            size='lg',
+            color="primary",
+            id="export_csv_button",
+            className="mb-1",
+            size="lg",
             outline=True,
             style={"marginTop": "30px"}
         ),
         dcc.Download(id="download-fanovaresults-csv")
-    ], className='text-center')
+    ], className="text-center")
 ], fluid=True)
 
 
 @callback(
-    Output('export_csv_button', 'disabled'),
-    Input('fanova_results', 'data'),
+    Output("export_csv_button", "disabled"),
+    Input("fanova_results", "data"),
     prevent_initial_call=False
 )
 def toggle_download_button(data):

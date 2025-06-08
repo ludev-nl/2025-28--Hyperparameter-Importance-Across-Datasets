@@ -14,17 +14,17 @@ import backend.openmlfetcher as fetcher
 import backend.fanovaservice as fnvs
 
 # Add the utils directory to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-dash.register_page(__name__, path='/experiment')
+dash.register_page(__name__, path="/experiment")
 
 
 # convert the fetched data into the right format for the dropdown menu
 # returns a list of dictionaries
 def df_to_dict_list(df, col):
-    return [dict(label=str(id) + '.' + row[col], value=id)
+    return [dict(label=str(id) + "." + row[col], value=id)
             for id, row in df.iterrows()]
 
 
@@ -36,12 +36,12 @@ flow_content = html.Div([
                             ]),
                     dbc.Row([
                         dbc.Col(html.Div(
-                            dcc.Dropdown(id='Flow-input',
+                            dcc.Dropdown(id="Flow-input",
                                          persistence=True,
-                                         persistence_type='session',
-                                         placeholder=('Please wait '
-                                                      'while we fetch the '
-                                                      'available flows...'))
+                                         persistence_type="session",
+                                         placeholder=("Please wait "
+                                                      "while we fetch the "
+                                                      "available flows..."))
                             )),
                     ]),
                     html.Br(),
@@ -50,12 +50,12 @@ flow_content = html.Div([
                             ]),
                     dbc.Row([
                         dbc.Col(html.Div(
-                            dcc.Dropdown(id='suite_dropdown',
+                            dcc.Dropdown(id="suite_dropdown",
                                          persistence=True,
-                                         persistence_type='session',
-                                         placeholder=('Please wait '
-                                                      'while we fetch the '
-                                                      'available suites...'))
+                                         persistence_type="session",
+                                         placeholder=("Please wait "
+                                                      "while we fetch the "
+                                                      "available suites..."))
                         ))
                     ]),
                     html.Br(),
@@ -68,7 +68,7 @@ flow_content = html.Div([
                                 min=1,
                                 placeholder="No limit",
                                 persistence=True,
-                                persistence_type='session'
+                                persistence_type="session"
                             ),
                             width=3,
                         )
@@ -121,7 +121,7 @@ flow_content = html.Div([
                                     color="danger",
                                     outline=True,
                                     n_clicks=0,
-                                    style={'display': 'none'}),
+                                    style={"display": "none"}),
                                     ]),
                             width={"size": 1}
                                 )
@@ -131,41 +131,41 @@ flow_content = html.Div([
 
 # if the flows are fetched, the placeholder text will be replaced
 @callback(
-    Output('Flow-input', 'placeholder'),
-    Input('flows', 'data'),
+    Output("Flow-input", "placeholder"),
+    Input("flows", "data"),
     prevent_initial_call=False
 )
 def swap_placeholder(data):
     if data is None or len(data) == 0:
         raise PreventUpdate
-    return 'Search tokens should be at least 3 characters...'
+    return "Search tokens should be at least 3 characters..."
 
 
 # if the suites are fetched, the dropdown will be populated
 @callback(
-    Output('suite_dropdown', 'options'),
-    Output('suite_dropdown', 'placeholder'),
-    Input('suites', 'data'),
+    Output("suite_dropdown", "options"),
+    Output("suite_dropdown", "placeholder"),
+    Input("suites", "data"),
     prevent_initial_call=False
 )
 def update_suites(suites):
-    return df_to_dict_list(suites, 'alias'), 'Select...'
+    return df_to_dict_list(suites, "alias"), "Select..."
 
 
 # Callback for the flow selection dropdown menu
 @callback(
     Output("Flow-input", "options"),
     Input("Flow-input", "search_value"),
-    Input('flows', 'data'),
-    State('Flow-input', 'value'),
+    Input("flows", "data"),
+    State("Flow-input", "value"),
     prevent_initial_call=False
 )
 def update_multi_options(search_value, flows, val):
     def mask(df: pd.DataFrame, token: str):
         if token.isnumeric():
-            col = 'id_str'
+            col = "id_str"
         else:
-            col = 'full_name'
+            col = "full_name"
 
         return df[col].str.contains(token, case=False, regex=False)
 
@@ -173,11 +173,11 @@ def update_multi_options(search_value, flows, val):
         if val is None or flows is None or val not in flows.index:
             raise PreventUpdate
         else:
-            return df_to_dict_list(flows.loc[[val]], 'full_name')
+            return df_to_dict_list(flows.loc[[val]], "full_name")
 
     results = flows
     valid_token = False
-    for token in split('[ .]', search_value):
+    for token in split("[ .]", search_value):
         if len(token) >= 3:
             results = results[mask(results, token)]
             valid_token = True
@@ -185,7 +185,7 @@ def update_multi_options(search_value, flows, val):
     if not valid_token:
         return []
 
-    lst = df_to_dict_list(results, 'full_name')
+    lst = df_to_dict_list(results, "full_name")
 
     return lst[:100]
 
@@ -194,8 +194,8 @@ def update_multi_options(search_value, flows, val):
 # necessary because outputting to global store directly
 # breaks prevent initial call
 @callback(
-    Output('fetched_ids', 'data'),
-    Input('fetched_ids_local', 'data'),
+    Output("fetched_ids", "data"),
+    Input("fetched_ids_local", "data"),
     prevent_initial_call=True
 )
 def propagate_ids(data):
@@ -204,8 +204,8 @@ def propagate_ids(data):
 
 # fetch the runs for a given flow/suite combination
 @callback(
-    Output("raw_configspace", 'data'),
-    Output("raw_data_store", 'data'),
+    Output("raw_configspace", "data"),
+    Output("raw_data_store", "data"),
     Output("fetched_ids_local", "data"),
     Output("fanova-warning", "is_open", allow_duplicate=True),
     Output("fanova-warning", "children", allow_duplicate=True),
@@ -228,7 +228,7 @@ def propagate_ids(data):
     progress=[Output("progress_open_ML", "value"),
               Output("progress_open_ML", "max")],
     cancel=[Input("cancel_button", "n_clicks")],
-    progress_default=['0', '100'],
+    progress_default=["0", "100"],
     cache_args_to_ignore=[0]  # Ignore the button clicks
 )
 def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
@@ -257,7 +257,7 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
     # Send a warning if no runs exist for this combination
     if len(data) == 0:
         return (dash.no_update, dash.no_update, dash.no_update,
-                True, 'This flow/suite combination has no runs.')
+                True, "This flow/suite combination has no runs.")
 
     return (fnvs.auto_configspace(data).to_serialized_dict(),
             Serverside(data),
@@ -269,9 +269,9 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
 
 # handles client download of raw data when button is clicked
 @callback(
-    Output("download_raw_data", 'data'),
+    Output("download_raw_data", "data"),
     Input("csv", "n_clicks"),
-    State('raw_data_store', 'data'),
+    State("raw_data_store", "data"),
     State("fetched_ids", "data"),
     prevent_initial_call=True,
     background=True
@@ -306,7 +306,7 @@ def download_raw_data(n_clicks, raw_data, fetched_ids):
 
 # enable fetch button if flow and suite are specified
 @callback(
-    Output('Fetch', 'disabled'),
+    Output("Fetch", "disabled"),
     Input("Flow-input", "value"),
     Input("suite_dropdown", "value"),
     prevent_initial_call=False
@@ -317,9 +317,9 @@ def toggle_fetch_button(val1, val2):
 
 # disable/enable download and analysis buttons based on data availability
 @callback(
-    Output('fanova', 'disabled'),
-    Output('csv', 'disabled'),
-    Input('raw_data_store', 'data'),
+    Output("fanova", "disabled"),
+    Output("csv", "disabled"),
+    Input("raw_data_store", "data"),
     prevent_initial_call=False
 )
 def toggle_buttons(data):
@@ -332,15 +332,15 @@ def toggle_buttons(data):
     Output("fanova-warning", "is_open", allow_duplicate=True),
     Output("fanova-warning", "children", allow_duplicate=True),
     Input("fanova", "n_clicks"),
-    State('raw_data_store', 'data'),
+    State("raw_data_store", "data"),
     State("filtered_data", "data"),
-    State('final_cfg_space', 'data'),
-    State('min_runs', 'value'),
-    State('log_scale_choice', 'data'),
-    State('analysis_select', 'value'),
-    State('pairwise_toggle', 'value'),
-    State('n_pairs_input', 'value'),
-    State('n_bins_input', 'value'),
+    State("final_cfg_space", "data"),
+    State("min_runs", "value"),
+    State("log_scale_choice", "data"),
+    State("analysis_select", "value"),
+    State("pairwise_toggle", "value"),
+    State("n_pairs_input", "value"),
+    State("n_bins_input", "value"),
     prevent_initial_call=True,
     background=True,
     running=[
@@ -355,7 +355,7 @@ def toggle_buttons(data):
     progress=[Output("progress_fanova", "value"),
               Output("progress_fanova", "max")],
     cancel=[Input("cancel_button2", "n_clicks")],
-    progress_default=['0', '100'],
+    progress_default=["0", "100"],
     cache_args_to_ignore=[0]  # Ignore the button clicks
 )
 def run_fanova(set_progress, n_clicks, raw_data, filtered_data,
@@ -377,7 +377,7 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data,
 
     # impute the data and make it numeric for fanova
     imputed_data, extended_cfg_space = fnvs.impute_data(data, cfg_space)
-    if 'pairwise' in toggle_pairs:
+    if "pairwise" in toggle_pairs:
         n_pairs = n_pairs or 3
         n_bins = n_bins or 32
         imputed_data, extended_cfg_space = fnvs.bin_numeric(imputed_data,
@@ -407,8 +407,8 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data,
             continue
 
         # run fanova, with or without pairwise marginals
-        selected_data = task_data[['value'] + param_selection]
-        if 'pairwise' in toggle_pairs:
+        selected_data = task_data[["value"] + param_selection]
+        if "pairwise" in toggle_pairs:
             results[task] = fnvs.run_fanova(selected_data,
                                             selected_space,
                                             total_pairs)
@@ -417,10 +417,10 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data,
                                             selected_space,
                                             0)
 
-    results = pd.DataFrame.from_dict(results, orient='index')
+    results = pd.DataFrame.from_dict(results, orient="index")
 
     # choose only the n_pairs most important pairs
-    if 'pairwise' in toggle_pairs and n_pairs < total_pairs:
+    if "pairwise" in toggle_pairs and n_pairs < total_pairs:
         pairwise = results.iloc[:, n:]
         avg_ranks = (
             pairwise.rank(axis=1)
@@ -444,7 +444,7 @@ config_content = html.Div([
               id="min_runs",
               value=0,
               persistence=True,
-              persistence_type='session'
+              persistence_type="session"
           )
       )
     ]),
@@ -455,108 +455,108 @@ config_content = html.Div([
     html.Br(),
     dbc.Row([
                 dbc.Col(html.Div(
-                            dcc.Dropdown(id='hyperparameter_dd')
-                        ), width={'size': 6, 'offset': 2}),
+                            dcc.Dropdown(id="hyperparameter_dd")
+                        ), width={"size": 6, "offset": 2}),
                 dbc.Col(
-                    dbc.Button("Reset Hyperparameter", id='reset_hp',
-                               disabled=True, size='md',
-                               color='danger', outline=True),
+                    dbc.Button("Reset Hyperparameter", id="reset_hp",
+                               disabled=True, size="md",
+                               color="danger", outline=True),
                     width=2
                 )
           ]),
     html.Br(),
-    dbc.Row(id='range'),
+    dbc.Row(id="range"),
     html.Br(),
     dbc.Row([
-        dbc.Col(dbc.Button('Filter', id='filter_button', outline=True,
+        dbc.Col(dbc.Button("Filter", id="filter_button", outline=True,
                            size="lg", color="primary", className="mb-4"),
-                width={'offset': 4, 'size': 2}),
-        dbc.Col(dbc.Button('Reset Space', id='reset_button', outline=True,
+                width={"offset": 4, "size": 2}),
+        dbc.Col(dbc.Button("Reset Space", id="reset_button", outline=True,
                            size="lg", color="danger", className="mb-4"),
-                width={'size': 2}),
+                width={"size": 2}),
       ]),
     dbc.Row([
-                dbc.Col(dash.dash_table.DataTable(id='runs_table',
+                dbc.Col(dash.dash_table.DataTable(id="runs_table",
                                                   editable=False,
                                                   cell_selectable=False,
                                                   persistence=True,
-                                                  persistence_type='session',
+                                                  persistence_type="session",
                                                   style_table={
-                                                    'height': '300px',
-                                                    'overflowY': 'scroll'
+                                                    "height": "300px",
+                                                    "overflowY": "scroll"
                                                    })),
-                dbc.Col(dash.dash_table.DataTable(id='nan_table',
+                dbc.Col(dash.dash_table.DataTable(id="nan_table",
                                                   editable=False,
                                                   cell_selectable=False,
                                                   persistence=True,
-                                                  persistence_type='session')),
+                                                  persistence_type="session")),
                                                 ]),
-    dbc.Row(dbc.Col(dash.dash_table.DataTable(id='const_table',
+    dbc.Row(dbc.Col(dash.dash_table.DataTable(id="const_table",
                                               editable=False,
                                               cell_selectable=False,
                                               persistence=True,
-                                              persistence_type='session',
+                                              persistence_type="session",
                                               style_table={
-                                                'margin-top': '10px',
-                                                'width': '50%',
-                                                'height': '300px',
-                                                'overflowY': 'scroll'
+                                                "margin-top": "10px",
+                                                "width": "50%",
+                                                "height": "300px",
+                                                "overflowY": "scroll"
                                                }))),
     ])
 
 
-# turn tasks' run table cells red if they do not have enough runs
+# turn tasks" run table cells red if they do not have enough runs
 @callback(
-    Output('runs_table', 'style_data_conditional'),
-    Input('min_runs', 'value'),
-    Input('runs_table', 'data'),
+    Output("runs_table", "style_data_conditional"),
+    Input("min_runs", "value"),
+    Input("runs_table", "data"),
     prevent_initial_call=True
 )
 def table_formatting(min_runs, data):
     return [
         {
-            'if': {
-                'filter_query': f'{{Runs}} < {min_runs}',
-                'column_id': 'Runs'
+            "if": {
+                "filter_query": f"{{Runs}} < {min_runs}",
+                "column_id": "Runs"
             },
-            'backgroundColor': '#FF4136'
+            "backgroundColor": "#FF4136"
         },
         {
-            'if': {
-                'filter_query': f'{{Filtered runs}} < {min_runs}',
-                'column_id': 'Filtered runs'
+            "if": {
+                "filter_query": f"{{Filtered runs}} < {min_runs}",
+                "column_id": "Filtered runs"
             },
-            'backgroundColor': '#FF4136'
+            "backgroundColor": "#FF4136"
         }
     ]
 
 
 # updates the hyperparameter options in the dropdown based on the configspace
 @callback(
-    Output(component_id='hyperparameter_dd', component_property='options',
+    Output(component_id="hyperparameter_dd", component_property="options",
            allow_duplicate=True),
-    Input(component_id='raw_configspace', component_property='data'),
+    Input(component_id="raw_configspace", component_property="data"),
     prevent_initial_call=True
 )
 def update_param_dropdown(raw_configspace):
-    return [param['name'] for param in raw_configspace['hyperparameters']
-            if param['type'] != 'constant']
+    return [param["name"] for param in raw_configspace["hyperparameters"]
+            if param["type"] != "constant"]
 
 
 # auxiliary function to transform the configspace to a standard dict format
 def transform_cfg_space(cfg):
-    return {p['name']: p for p in cfg['hyperparameters']}
+    return {p["name"]: p for p in cfg["hyperparameters"]}
 
 
 # resets the edited configspace when the user clicks the reset button
 @callback(
-    Output(component_id='filtered_config', component_property='data',
+    Output(component_id="filtered_config", component_property="data",
            allow_duplicate=True),
-    Output(component_id='range', component_property='children'),
-    Output(component_id='hyperparameter_dd', component_property='value',
+    Output(component_id="range", component_property="children"),
+    Output(component_id="hyperparameter_dd", component_property="value",
            allow_duplicate=True),
-    Input(component_id='reset_button', component_property='n_clicks'),
-    State(component_id='raw_configspace', component_property='data'),
+    Input(component_id="reset_button", component_property="n_clicks"),
+    State(component_id="raw_configspace", component_property="data"),
     prevent_initial_call=True
 )
 def reset_config_space(n_clicks, raw_configspace):
@@ -568,15 +568,15 @@ def reset_config_space(n_clicks, raw_configspace):
 # type of the hyperparameter selected by the user
 # and handles the reset hyperparameter button behaviour
 @callback(
-    Output(component_id='range', component_property='children',
+    Output(component_id="range", component_property="children",
            allow_duplicate=True),
-    Output(component_id='reset_hp', component_property='disabled'),
-    Output(component_id='reset_hp', component_property='n_clicks'),
-    Input(component_id='reset_hp', component_property='n_clicks'),
-    Input(component_id='hyperparameter_dd', component_property='value'),
-    State(component_id='filtered_config', component_property='data'),
-    State(component_id='raw_configspace', component_property='data'),
-    State('log_scale_choice', 'data'),
+    Output(component_id="reset_hp", component_property="disabled"),
+    Output(component_id="reset_hp", component_property="n_clicks"),
+    Input(component_id="reset_hp", component_property="n_clicks"),
+    Input(component_id="hyperparameter_dd", component_property="value"),
+    State(component_id="filtered_config", component_property="data"),
+    State(component_id="raw_configspace", component_property="data"),
+    State("log_scale_choice", "data"),
     prevent_initial_call=True
 )
 def show_adequate_range(clicks, hyperparameter, filtered_config,
@@ -600,7 +600,7 @@ def show_adequate_range(clicks, hyperparameter, filtered_config,
            else False)
 
     # we display widgets to select the range based on the hyperp type
-    if hyperparameter_value['type'] == 'uniform_float':
+    if hyperparameter_value["type"] == "uniform_float":
         return (
             (dbc.Col(width=2),
              dbc.Col(
@@ -609,8 +609,8 @@ def show_adequate_range(clicks, hyperparameter, filtered_config,
                   ),
              dbc.Col(
                   dbc.Input(type="text", id="min_float_value",
-                            value=str(hyperparameter_value['lower']),
-                            size='sm'),
+                            value=str(hyperparameter_value["lower"]),
+                            size="sm"),
                   width=3
                   ),
              dbc.Col(
@@ -619,20 +619,20 @@ def show_adequate_range(clicks, hyperparameter, filtered_config,
                   ),
              dbc.Col(
                      dbc.Input(type="text", id="max_float_value",
-                               value=str(hyperparameter_value['upper']),
-                               size='sm'),
+                               value=str(hyperparameter_value["upper"]),
+                               size="sm"),
                      width=3
                      ),
              html.Center(
              dcc.Checklist(
                      options=[{"label": " Use log scale", "value": "log"}],
-                     value=['log'] if log else [],
+                     value=["log"] if log else [],
                      id="log-scale-checkbox",
                      inline=True,
                      )
              )
              ), False, None)
-    elif hyperparameter_value['type'] == 'uniform_int':
+    elif hyperparameter_value["type"] == "uniform_int":
         return (
             (dbc.Col(width=2),
              dbc.Col(
@@ -641,7 +641,7 @@ def show_adequate_range(clicks, hyperparameter, filtered_config,
                      ),
              dbc.Col(
                      dbc.Input(type="number", id="min_int_value",
-                               value=hyperparameter_value['lower'], size='sm'),
+                               value=hyperparameter_value["lower"], size="sm"),
                      width=3
                      ),
              dbc.Col(
@@ -650,27 +650,27 @@ def show_adequate_range(clicks, hyperparameter, filtered_config,
                      ),
              dbc.Col(
                      dbc.Input(type="number", id="max_int_value",
-                               value=hyperparameter_value['upper'], size='sm'),
+                               value=hyperparameter_value["upper"], size="sm"),
                      width=3
                      ),
              dbc.Col(
                      dcc.Checklist(
                          options=[{"label": "Use log scale", "value": "log"}],
-                         value=['log'] if log else [],
+                         value=["log"] if log else [],
                          id="log-scale-checkbox",
                          inline=True,
                      ),
                      width={"size": 6, "offset": 3}
                      )
              ), False, None)
-    elif hyperparameter_value['type'] == 'categorical':
+    elif hyperparameter_value["type"] == "categorical":
         return (
             (dbc.Col(width=2),
              dbc.Col(
                 html.Div(
-                     dcc.Dropdown(raw_configspace[hyperparameter]['choices'],
-                                  hyperparameter_value['choices'], multi=True,
-                                  id='categories')),
+                     dcc.Dropdown(raw_configspace[hyperparameter]["choices"],
+                                  hyperparameter_value["choices"], multi=True,
+                                  id="categories")),
                 width=8
                 ),
              ), False, None)
@@ -680,13 +680,13 @@ def show_adequate_range(clicks, hyperparameter, filtered_config,
 
 # updates the range of float hyperparameters when the user edits them
 @callback(
-    Output(component_id='filtered_config', component_property='data',
+    Output(component_id="filtered_config", component_property="data",
            allow_duplicate=True),
-    Input(component_id='min_float_value', component_property='value'),
-    Input(component_id='max_float_value', component_property='value'),
-    State(component_id='raw_configspace', component_property='data'),
-    State(component_id='hyperparameter_dd', component_property='value'),
-    State(component_id='filtered_config', component_property='data'),
+    Input(component_id="min_float_value", component_property="value"),
+    Input(component_id="max_float_value", component_property="value"),
+    State(component_id="raw_configspace", component_property="data"),
+    State(component_id="hyperparameter_dd", component_property="value"),
+    State(component_id="filtered_config", component_property="data"),
     prevent_initial_call=True
 )
 def update_float_range_hyperparameter(min_float_value, max_float_value,
@@ -699,18 +699,18 @@ def update_float_range_hyperparameter(min_float_value, max_float_value,
         filtered_config = {}
     # if the range is the same as the original, we delete the information abt
     # this hyperparameter
-    if (float(min_float_value) == raw_configspace[hyperparameter]['lower'] and
+    if (float(min_float_value) == raw_configspace[hyperparameter]["lower"] and
             (float(max_float_value) ==
-                raw_configspace[hyperparameter]['upper'])):
+                raw_configspace[hyperparameter]["upper"])):
         if hyperparameter in filtered_config.keys():
             del filtered_config[hyperparameter]
         return filtered_config
     # otherwise we update the filtered config info with the current information
     filtered_config[hyperparameter] = (
-          {'type': 'uniform_float',
-           'name': raw_configspace[hyperparameter]['name'],
-           'lower': float(min_float_value),
-           'upper': float(max_float_value)}
+          {"type": "uniform_float",
+           "name": raw_configspace[hyperparameter]["name"],
+           "lower": float(min_float_value),
+           "upper": float(max_float_value)}
            )
 
     return filtered_config
@@ -718,13 +718,13 @@ def update_float_range_hyperparameter(min_float_value, max_float_value,
 
 # updates the range of int hyperparameters when the user edits them
 @callback(
-    Output(component_id='filtered_config', component_property='data',
+    Output(component_id="filtered_config", component_property="data",
            allow_duplicate=True),
-    Input(component_id='min_int_value', component_property='value'),
-    Input(component_id='max_int_value', component_property='value'),
-    State(component_id='raw_configspace', component_property='data'),
-    State(component_id='hyperparameter_dd', component_property='value'),
-    State(component_id='filtered_config', component_property='data'),
+    Input(component_id="min_int_value", component_property="value"),
+    Input(component_id="max_int_value", component_property="value"),
+    State(component_id="raw_configspace", component_property="data"),
+    State(component_id="hyperparameter_dd", component_property="value"),
+    State(component_id="filtered_config", component_property="data"),
     prevent_initial_call=True
 )
 def update_int_range_hyperparameter(min_int_value, max_int_value,
@@ -737,29 +737,29 @@ def update_int_range_hyperparameter(min_int_value, max_int_value,
         filtered_config = {}
     # if the range is the same as the original, we delete the information about
     # this hyperparameter
-    if ((min_int_value == raw_configspace[hyperparameter]['lower']) and
-            (max_int_value == raw_configspace[hyperparameter]['upper'])):
+    if ((min_int_value == raw_configspace[hyperparameter]["lower"]) and
+            (max_int_value == raw_configspace[hyperparameter]["upper"])):
         if hyperparameter in filtered_config.keys():
             del filtered_config[hyperparameter]
         return filtered_config
     # otherwise we update the filtered config info with the current information
     else:
         filtered_config[hyperparameter] = (
-            {'type': 'uniform_int',
-             'name': raw_configspace[hyperparameter]['name'],
-             'lower': min_int_value, 'upper': max_int_value}
+            {"type": "uniform_int",
+             "name": raw_configspace[hyperparameter]["name"],
+             "lower": min_int_value, "upper": max_int_value}
              )
         return filtered_config
 
 
 # updates the range of cat hyperparameters when the user edits them
 @callback(
-    Output(component_id='filtered_config', component_property='data',
+    Output(component_id="filtered_config", component_property="data",
            allow_duplicate=True),
-    Input(component_id='categories', component_property='value'),
-    State(component_id='raw_configspace', component_property='data'),
-    State(component_id='hyperparameter_dd', component_property='value'),
-    State(component_id='filtered_config', component_property='data'),
+    Input(component_id="categories", component_property="value"),
+    State(component_id="raw_configspace", component_property="data"),
+    State(component_id="hyperparameter_dd", component_property="value"),
+    State(component_id="filtered_config", component_property="data"),
     prevent_initial_call=True
 )
 def update_categorical_hyperparameter(categories, raw_configspace,
@@ -771,29 +771,29 @@ def update_categorical_hyperparameter(categories, raw_configspace,
     # this hyperparameter
     if filtered_config is None:
         filtered_config = {}
-    if (set(categories) == set(raw_configspace[hyperparameter]['choices'])):
+    if (set(categories) == set(raw_configspace[hyperparameter]["choices"])):
         if hyperparameter in filtered_config.keys():
             del filtered_config[hyperparameter]
         return filtered_config
     # otherwise we update the filtered config info with the current information
     filtered_config[hyperparameter] = (
-        {'type': 'categorical',
-         'name': raw_configspace[hyperparameter]['name'],
-         'choices': categories}
+        {"type": "categorical",
+         "name": raw_configspace[hyperparameter]["name"],
+         "choices": categories}
          )
     return filtered_config
 
 
 # handles the final filtering of the space when the users clicks the button
 @callback(
-    Output(component_id='filtered_data', component_property='data'),
-    Output(component_id='runs_table', component_property='data'),
-    Output(component_id='nan_table', component_property='data'),
-    Output(component_id='const_table', component_property='data'),
-    Input(component_id='filter_button', component_property='n_clicks'),
-    Input(component_id='raw_data_store', component_property='data'),
-    State(component_id='raw_configspace', component_property='data'),
-    State(component_id='filtered_config', component_property='data'),
+    Output(component_id="filtered_data", component_property="data"),
+    Output(component_id="runs_table", component_property="data"),
+    Output(component_id="nan_table", component_property="data"),
+    Output(component_id="const_table", component_property="data"),
+    Input(component_id="filter_button", component_property="n_clicks"),
+    Input(component_id="raw_data_store", component_property="data"),
+    State(component_id="raw_configspace", component_property="data"),
+    State(component_id="filtered_config", component_property="data"),
     prevent_initial_call=False
 )
 def filter_action(n_clicks, raw_data, raw_space, filter_cfg):
@@ -804,40 +804,40 @@ def filter_action(n_clicks, raw_data, raw_space, filter_cfg):
     if raw_data is None or len(raw_data) == 0:
         return None, None, None, None
 
-    if (dash.callback_context.triggered_id == 'raw_data_store'
+    if (dash.callback_context.triggered_id == "raw_data_store"
             or filter_cfg is None):
         return (None,
-                [{'Task': id, 'Runs': len(raw_data[id])}
+                [{"Task": id, "Runs": len(raw_data[id])}
                  for id in raw_data.keys()],
-                [{'Hyperparameter': p['name'],
-                    'Missing values': nan_count(raw_data, p['name'])}
-                 for p in raw_space['hyperparameters']
-                 if p['type'] != 'constant'],
-                [{'Constant Hyperparameters': p['name']}
-                 for p in raw_space['hyperparameters']
-                 if p['type'] == 'constant'])
+                [{"Hyperparameter": p["name"],
+                    "Missing values": nan_count(raw_data, p["name"])}
+                 for p in raw_space["hyperparameters"]
+                 if p["type"] != "constant"],
+                [{"Constant Hyperparameters": p["name"]}
+                 for p in raw_space["hyperparameters"]
+                 if p["type"] == "constant"])
 
-    serialized = {'hyperparameters': filter_cfg.values()}
+    serialized = {"hyperparameters": filter_cfg.values()}
     filter_space = ConfigurationSpace.from_serialized_dict(serialized)
 
     filtered = fnvs.filter_data(raw_data, filter_space)
 
-    runs = [{'Task': id,
-             'Original runs': len(raw_data[id]),
-             'Filtered runs': len(filtered[id])}
+    runs = [{"Task": id,
+             "Original runs": len(raw_data[id]),
+             "Filtered runs": len(filtered[id])}
             for id in raw_data.keys()]
 
-    nans = [{'Hyperparameter': p['name'],
-             'Original missing values': nan_count(raw_data, p['name']),
-             'Filtered missing values': nan_count(filtered, p['name'])}
-            for p in raw_space['hyperparameters'] if p['type'] != 'constant']
+    nans = [{"Hyperparameter": p["name"],
+             "Original missing values": nan_count(raw_data, p["name"]),
+             "Filtered missing values": nan_count(filtered, p["name"])}
+            for p in raw_space["hyperparameters"] if p["type"] != "constant"]
 
     return Serverside(filtered), runs, nans, dash.no_update
 
 
 @callback(
-    Output('fanova_results', 'data'),
-    Input('fanova_results_local', 'data')
+    Output("fanova_results", "data"),
+    Input("fanova_results_local", "data")
 )
 def update_global_results(data):
     return data
@@ -849,29 +849,29 @@ fanova_content = html.Div([
     html.Div(("Select at least two parameters to analyze (only those "
               "that are non-constant after filtering are presented):")),
     dcc.Dropdown(
-        id='analysis_select',
+        id="analysis_select",
         persistence=True,
-        persistence_type='session',
+        persistence_type="session",
         multi=True
     ),
 
     html.Br(),
     dbc.Checklist(
-        id='pairwise_toggle',
-        options=[{'label': ('Compute pairwise importance (requires'
-                            ' binning of numeric hyperparameters)'),
-                  'value': 'pairwise'}],
+        id="pairwise_toggle",
+        options=[{"label": ("Compute pairwise importance (requires"
+                            " binning of numeric hyperparameters)"),
+                  "value": "pairwise"}],
         value=[],
         persistence=True,
-        persistence_type='session'
+        persistence_type="session"
     ),
     dbc.Collapse(
         [
             html.Br(),
             dbc.Row([
                 dbc.Col(
-                    html.Div('Enter the number of most important'
-                             ' pairwise marginals to show:')
+                    html.Div("Enter the number of most important"
+                             " pairwise marginals to show:")
                 ),
                 dbc.Col(
                     dbc.Input(
@@ -880,15 +880,15 @@ fanova_content = html.Div([
                         min=1,
                         value=3,
                         persistence=True,
-                        persistence_type='session',
+                        persistence_type="session",
                     )
                 )
             ]),
             html.Br(),
             dbc.Row([
                 dbc.Col(
-                    html.Div('Enter maximum amount of bins for'
-                             ' numerical hyperparameters:')
+                    html.Div("Enter maximum amount of bins for"
+                             " numerical hyperparameters:")
                 ),
                 dbc.Col(
                     dbc.Input(
@@ -897,12 +897,12 @@ fanova_content = html.Div([
                         min=2,
                         value=32,
                         persistence=True,
-                        persistence_type='session',
+                        persistence_type="session",
                     )
                 )
             ])
         ],
-        id='pairwise_settings_collapse',
+        id="pairwise_settings_collapse",
         is_open=False,
     ),
 
@@ -936,26 +936,26 @@ fanova_content = html.Div([
                     className="mt-2",
                     color="danger",
                     outline=True,
-                    style={'visibility': 'hidden'},
+                    style={"visibility": "hidden"},
                     n_clicks=0),
             ]),
             width={"size": 1}
         )
     ]),
-    dcc.Store('final_cfg_space', 'session', None)
+    dcc.Store("final_cfg_space", "session", None)
 ])
 
 
 # expand the binning settings if binning is enabled
 @callback(
-    Output('pairwise_settings_collapse', 'is_open'),
-    Output('n_pairs_input', 'value'),
-    Output('n_bins_input', 'value'),
-    Input('pairwise_toggle', 'value'),
+    Output("pairwise_settings_collapse", "is_open"),
+    Output("n_pairs_input", "value"),
+    Output("n_bins_input", "value"),
+    Input("pairwise_toggle", "value"),
     prevent_initial_call=False
 )
 def toggle_pairwise_settings(toggle):
-    if 'pairwise' in toggle:
+    if "pairwise" in toggle:
         return True, dash.no_update, dash.no_update
     else:
         return False, 3, 32
@@ -964,21 +964,21 @@ def toggle_pairwise_settings(toggle):
 # populate the analysis selection dropdown with all non-constant
 # hyperparameters in the filtered data
 @callback(
-    Output('final_cfg_space', 'data'),
-    Output('analysis_select', 'options'),
-    Input('tabs', 'active_tab'),
-    Input('raw_configspace', 'data'),
-    State('filtered_data', 'data'),
+    Output("final_cfg_space", "data"),
+    Output("analysis_select", "options"),
+    Input("tabs", "active_tab"),
+    Input("raw_configspace", "data"),
+    State("filtered_data", "data"),
     prevent_initial_call=True
 )
 def analysis_options(tab, raw_cfg, filtered_data):
     trigger = dash.callback_context.triggered_id
 
-    if trigger == 'tabs' and (tab != 'fanova' or raw_cfg is None):
+    if trigger == "tabs" and (tab != "fanova" or raw_cfg is None):
         raise PreventUpdate
 
     # determine if triggered by raw data update, or filtered data update
-    if (trigger == 'raw_configspace'
+    if (trigger == "raw_configspace"
             or filtered_data is None
             or len(filtered_data) == 0):
         cfg_space = ConfigurationSpace.from_serialized_dict(raw_cfg)
@@ -1000,20 +1000,20 @@ layout = dbc.Container(
         dcc.Store(id="raw_configspace", storage_type="session", data=None),
         dcc.Store(id="fanova_results_local",
                   storage_type="session", data=None),
-        dcc.Store(id="log_scale_choice", storage_type='session', data={}),
-        dcc.Store(id='filtered_config_int', storage_type='session'),
-        dcc.Store(id='filtered_config_float', storage_type='session'),
-        dcc.Store(id='filtered_config_cat', storage_type='session'),
-        dcc.Store(id='filtered_config', storage_type='session'),
+        dcc.Store(id="log_scale_choice", storage_type="session", data={}),
+        dcc.Store(id="filtered_config_int", storage_type="session"),
+        dcc.Store(id="filtered_config_float", storage_type="session"),
+        dcc.Store(id="filtered_config_cat", storage_type="session"),
+        dcc.Store(id="filtered_config", storage_type="session"),
         html.H1("Experiment Setup"),
-        dcc.Markdown('\n1. Choose which flow and suite you want to analyze.'
-                     'Click the fetch button to fetch their data.\n'
-                     '2. Filter your configuration space by selecting which'
-                     'hyperparameter configurations should be included. By '
-                     'default, all configurations are included.\n'
-                     '3. Select which parameters to analyze, and configure '
-                     "pairwise importance settings. Click the 'Run Fanova' "
-                     'button and wait for the results.\n'),
+        dcc.Markdown("\n1. Choose which flow and suite you want to analyze."
+                     "Click the fetch button to fetch their data.\n"
+                     "2. Filter your configuration space by selecting which"
+                     "hyperparameter configurations should be included. By "
+                     "default, all configurations are included.\n"
+                     "3. Select which parameters to analyze, and configure "
+                     "pairwise importance settings. Click the \"Run Fanova\" "
+                     "button and wait for the results.\n"),
         dbc.Tabs(
             [
                 dbc.Tab(flow_content, label="Flow and Suite Selection",
@@ -1040,13 +1040,13 @@ layout = dbc.Container(
 @callback(
     Output("log_scale_choice", "data"),
     Input("log-scale-checkbox", "value"),
-    Input('raw_configspace', 'data'),
-    State(component_id='hyperparameter_dd', component_property='value'),
+    Input("raw_configspace", "data"),
+    State(component_id="hyperparameter_dd", component_property="value"),
     State("log_scale_choice", "data"),
     prevent_initial_call=True
 )
 def store_log_checkbox(value, cfg_space, param, log_data):
-    if dash.callback_context.triggered_id == 'raw_configspace':
+    if dash.callback_context.triggered_id == "raw_configspace":
         return {}
 
     if value is None or param is None:
