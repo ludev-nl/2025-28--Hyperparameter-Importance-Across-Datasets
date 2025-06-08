@@ -10,16 +10,17 @@ import scikit_posthocs as sp
 import numpy as np
 
 
-
 def colormap(hyperparameters):
     number_hp = len(hyperparameters)
     gist_rainbow = mpl.colormaps['gist_rainbow'].resampled(number_hp)
-    new_colors = gist_rainbow(np.linspace(0,1,number_hp))
+    new_colors = gist_rainbow(np.linspace(0, 1, number_hp))
     hex_colors = [mpl.colors.to_hex(c) for c in new_colors]
     return hex_colors
 
+
 def pretty_name(name):
     return name[0].upper() + name[1:].replace('_', ' ')
+
 
 def violinplot(fanova_results: pd.DataFrame,
                show: bool) -> go.Figure:
@@ -48,7 +49,7 @@ def violinplot(fanova_results: pd.DataFrame,
                                 meanline_visible=True,
                                 spanmode='hard',
                                 line_color=color_dict[i])
-                                )
+                      )
 
     fig.update_layout(yaxis_title="Variance Contribution",
                       xaxis_tickangle=-45)
@@ -64,7 +65,8 @@ def crit_diff_diagram(fanova_results: pd.DataFrame) -> str:
     fanova_results, and show the plot iff show == True.
     """
     fanova_results.index = list(range(len(fanova_results)))
-    dict_data = {val: np.array(list(fanova_results[val])) for val in fanova_results.columns}
+    dict_data = {val: np.array(list(fanova_results[val]))
+                 for val in fanova_results.columns}
     data2 = (
       pd.DataFrame(fanova_results)
       .rename(mapper=pretty_name, axis=1)
@@ -77,7 +79,8 @@ def crit_diff_diagram(fanova_results: pd.DataFrame) -> str:
       .reset_index()
     )
     color_dict = colormap(fanova_results.columns)
-    avg_rank = data2.groupby('cv_fold').score.rank().groupby(data2.estimator).mean()
+    rank = data2.groupby('cv_fold').score.rank()
+    avg_rank = rank.groupby(data2.estimator).mean()
     ss.friedmanchisquare(*dict_data.values())
     test_results = sp.posthoc_conover_friedman(
         data2,
@@ -88,9 +91,12 @@ def crit_diff_diagram(fanova_results: pd.DataFrame) -> str:
         y_col='score',
     )
     rcParams.update({'figure.autolayout': True})
-    fig = figure.Figure(figsize=(8,2))
+    fig = figure.Figure(figsize=(8, 2))
     ax = fig.subplots()
-    sp.critical_difference_diagram(avg_rank, test_results,ax=ax,  color_palette=color_dict)
+    sp.critical_difference_diagram(avg_rank,
+                                   test_results,
+                                   ax=ax,
+                                   color_palette=color_dict)
     buf = BytesIO()
     fig.savefig(buf, format='png')
     fig_data = base64.b64encode(buf.getbuffer()).decode("utf8")

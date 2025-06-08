@@ -2,7 +2,8 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, Constant, OrdinalHyperparameter
+from ConfigSpace import (ConfigurationSpace, CategoricalHyperparameter,
+                         Constant, OrdinalHyperparameter)
 from ConfigSpace.hyperparameters import NumericalHyperparameter
 from ConfigSpace.hyperparameters.hp_components import ROUND_PLACES
 
@@ -79,7 +80,7 @@ class FanovaTests(unittest.TestCase):
         # Check that all hyperparams are as they should be
         for param_name, correct_param in correct.items():
             auto_param = created[param_name]
-            if type(auto_param) != type(correct_param):
+            if type(auto_param) is type(correct_param):
                 print(param_name)
             self.assertEqual(type(auto_param), type(correct_param))
 
@@ -154,11 +155,11 @@ class FanovaTests(unittest.TestCase):
         for p_name, param in new_cfg.items():
             if isinstance(cfg_space[p_name], NumericalHyperparameter):
                 self.assertIsInstance(param, OrdinalHyperparameter)
-                self.assertLessEqual(set(all_binned[p_name].unique()), set(param.sequence))
+                self.assertLessEqual(set(all_binned[p_name].unique()),
+                                     set(param.sequence))
                 self.assertLessEqual(set(param.sequence), set(range(32)))
             else:
                 self.assertIsInstance(param, type(cfg_space[p_name]))
-
 
     def test_prepare(self):
         imputed = self.stub_impute()

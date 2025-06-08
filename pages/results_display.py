@@ -1,5 +1,4 @@
 import dash
-from dash import html,dcc
 import dash_bootstrap_components as dbc
 from dash_extensions.enrich import Input, Output, State, callback, dcc, html
 import backend.visualiser as vis
@@ -21,8 +20,8 @@ def display_results(fanova_results):
     fanova_df = read_json(StringIO(fanova_results))
 
     violin = vis.violinplot(fanova_df, False)
-    crit_diff = vis.crit_diff_diagram(fanova_df) if len(fanova_df.columns) > 2 else None
-
+    crit_diff = (vis.crit_diff_diagram(fanova_df)
+                 if len(fanova_df.columns) > 2 else None)
     return violin, crit_diff
 
 
@@ -30,14 +29,16 @@ layout = dbc.Container([
     # dcc.Store(id="fetched_ids", storage_type="session"),
     dbc.Row([
         dbc.Col([
-            html.Center(html.H3('Violin Plot', style={"marginBottom": "20px"})),
+            html.Center(html.H3('Violin Plot',
+                                style={"marginBottom": "20px"})),
             dcc.Graph(id='violin-plot'),
         ], width={'offset': 2, 'size': 8})
     ]),
 
     dbc.Row([
         dbc.Col([
-            html.Center(html.H3('Critical Difference Plot', style={"marginBottom": "20px"})),
+            html.Center(html.H3('Critical Difference Plot',
+                                style={"marginBottom": "20px"})),
             html.Img(id='critical-distance-plot'),
         ], width={'offset': 2, 'size': 8})
     ]),
@@ -80,7 +81,9 @@ def export_csv(n_clicks, fanova_results, fetched_ids):
 
     results_df = read_json(StringIO(fanova_results))
 
-    flow_id = fetched_ids.get("flow_id", "unkouwn") if fetched_ids else "unknouwn"
-    suite_id = fetched_ids.get("suite_id", "unkouwn") if fetched_ids else "unkouwn"
+    flow_id = (fetched_ids.get("flow_id", "unkouwn")
+               if fetched_ids else "unknouwn")
+    suite_id = (fetched_ids.get("suite_id", "unkouwn")
+                if fetched_ids else "unkouwn")
     filename = f"fanova_results_f{flow_id}_s{suite_id}.csv"
     return dcc.send_data_frame(results_df.to_csv, filename, index=False)

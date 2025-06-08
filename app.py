@@ -1,7 +1,15 @@
 import dash
 from dash import DiskcacheManager, CeleryManager
 import dash_bootstrap_components as dbc
-from dash_extensions.enrich import DashProxy, ServersideOutputTransform, Input, Output, dcc, html, Serverside, callback
+from dash_extensions.enrich import (
+    DashProxy,
+    ServersideOutputTransform,
+    Input,
+    Output,
+    dcc,
+    html,
+    Serverside,
+    callback)
 from backend.openmlfetcher import fetch_flows, fetch_suites
 import sys
 
@@ -14,8 +22,8 @@ deploy = ('gunicorn' in sys.argv[0]
 if deploy:
     from dash_extensions.enrich import RedisBackend as DashRedisBackend
     from celery import Celery
-    from celery.backends.redis import RedisBackend as CeleryRedisBackend
     from redis import StrictRedis
+    from redis.exceptions import ConnectionError
 
     # Redis configuration
     host = 'localhost'
@@ -28,7 +36,7 @@ if deploy:
 
     try:
         redis_inst.ping()
-    except:
+    except ConnectionError:
         sys.stderr.write('Make sure you have a Redis server running.')
         sys.exit()
 
@@ -38,7 +46,10 @@ if deploy:
     rb = manager.handle.backend.expires = cache_expiry
 
     # Configure the redis backend for Serverside Output Transform
-    backend = DashRedisBackend(default_timeout=cache_expiry+5, host=host, port=port, db=db)
+    backend = DashRedisBackend(
+        default_timeout=cache_expiry+5,
+        host=host, port=port, db=db
+        )
 else:
     from dash_extensions.enrich import FileSystemBackend
     from diskcache import Cache
@@ -92,9 +103,9 @@ sidebar = html.Div(
 content = html.Div(dash.page_container, style=CONTENT_STYLE)
 
 app.layout = html.Div([
-    #store elements that can be used to store the data over pages
-    #storage_type is used to specify how long the data is stored for.
-    #session means that data is cleared after browser is closed
+    # store elements that can be used to store the data over pages
+    # storage_type is used to specify how long the data is stored for.
+    # session means that data is cleared after browser is closed
 
     dcc.Store(id="fanova_results", storage_type="session", data=None),
     dcc.Store(id="fetched_ids", storage_type="session", data=None),
@@ -106,6 +117,7 @@ app.layout = html.Div([
 
 
     ])
+
 
 @callback(
     Output('flows', 'data'),
@@ -126,6 +138,7 @@ def load_flows(id):
 
     return Serverside(options_df), Serverside(suites_df)
 
+
 if deploy:
     app.register_celery_tasks()
     server = app.server
@@ -133,5 +146,3 @@ if deploy:
 if __name__ == "__main__":
     debug = 'debug' in sys.argv
     app.run(port=8888, debug=debug)
-
-
