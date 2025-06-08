@@ -28,6 +28,7 @@ def df_to_dict_list(df, col):
             for id, row in df.iterrows()]
 
 
+# this contains all the content of the subpage to select the flow and suite
 flow_content = html.Div([
                     html.Br(),
                     dbc.Row([
@@ -212,9 +213,7 @@ def propagate_ids(data):
     background=True,
     running=[
         (Output("Fetch", "disabled"), True, False),
-        # (Output("fanova", "disabled"), True, False),
         (Output("csv", "disabled"), True, False),
-        # (Output('progress_open_ML', 'color'), 'primary', 'success'),
         (Output("progress_open_ML", "style"),
             {"visibility": "visible"},
             {"visibility": "hidden"}),
@@ -264,7 +263,7 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
             ""
             )
 
-
+# handles client download of raw data when button is clicked
 @callback(
     Output("download_raw_data", 'data'),
     Input("csv", "n_clicks"),
@@ -423,6 +422,7 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data,
     return results.to_json(), False, ""
 
 
+# contains all the content from the configuration space subpage
 config_content = html.Div([
     html.Br(),
     dbc.Row([
@@ -494,6 +494,7 @@ config_content = html.Div([
     ])
 
 
+# callback and fuction to display the table with the ammount of runs/experiment
 @callback(
     Output('runs_table', 'style_data_conditional'),
     Input('min_runs', 'value'),
@@ -519,6 +520,7 @@ def table_formatting(min_runs, data):
     ]
 
 
+# updates the hyperparameter options in the dropdown based on the configspace
 @callback(
     Output(component_id='hyperparameter_dd', component_property='options',
            allow_duplicate=True),
@@ -530,10 +532,12 @@ def update_param_dropdown(raw_configspace):
             if param['type'] != 'constant']
 
 
+# auxiliary function to transform the configspace to a standard dict format
 def transform_cfg_space(cfg):
     return {p['name']: p for p in cfg['hyperparameters']}
 
 
+# resets the edited configspace when the user clicks the reset button
 @callback(
     Output(component_id='filtered_config', component_property='data',
            allow_duplicate=True),
@@ -549,6 +553,9 @@ def reset_config_space(n_clicks, raw_configspace):
     return raw_configspace, None, None
 
 
+# displays the adequate hyperparameter range editing based on the
+# type of the hyperparameter selected by the user
+# and handles the reset hyperparameter button behaviour
 @callback(
     Output(component_id='range', component_property='children',
            allow_duplicate=True),
@@ -657,6 +664,7 @@ def show_adequate_range(clicks, hyperparameter, filtered_config,
         return None
 
 
+# updates the range of float hyperparameters when the user edits them
 @callback(
     Output(component_id='filtered_config', component_property='data',
            allow_duplicate=True),
@@ -691,6 +699,7 @@ def update_float_range_hyperparameter(min_float_value, max_float_value,
     return filtered_config
 
 
+# updates the range of int hyperparameters when the user edits them
 @callback(
     Output(component_id='filtered_config', component_property='data',
            allow_duplicate=True),
@@ -723,6 +732,7 @@ def update_int_range_hyperparameter(min_int_value, max_int_value,
         return filtered_config
 
 
+# updates the range of cat hyperparameters when the user edits them
 @callback(
     Output(component_id='filtered_config', component_property='data',
            allow_duplicate=True),
@@ -751,6 +761,7 @@ def update_categorical_hyperparameter(categories, raw_configspace,
     return filtered_config
 
 
+# handles the final filtering of the space when the users clicks the button
 @callback(
     Output(component_id='filtered_data', component_property='data'),
     Output(component_id='runs_table', component_property='data'),
@@ -809,6 +820,7 @@ def update_global_results(data):
     return data
 
 
+# all the content of the fanova subpage
 fanova_content = html.Div([
     html.Br(),
     html.Div(("Select at least two parameters to analyze (only those "
