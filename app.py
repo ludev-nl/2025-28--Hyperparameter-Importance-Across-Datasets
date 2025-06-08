@@ -29,11 +29,12 @@ if deploy:
     host = 'localhost'
     port = 6379
     db = 0
-    cache_expiry = 24 * 60 * 60
+    cache_expiry = 24 * 60 * 60 # cache for 24 hours
 
     redis_url = 'redis://' + host + ':' + str(port) + '/' + str(db)
     redis_inst = StrictRedis.from_url(redis_url)
 
+    # Check if the Redis backend is active
     try:
         redis_inst.ping()
     except ConnectionError:
@@ -114,11 +115,10 @@ app.layout = html.Div([
     dcc.Location(id="url"),
     sidebar,
     content
-
-
     ])
 
 
+# fetches the available flows and suites from OpenML
 @callback(
     Output('flows', 'data'),
     Output('suites', 'data'),
@@ -127,7 +127,7 @@ app.layout = html.Div([
     prevent_initial_call=False,
     cache_args_to_ignore=[0]
 )
-def load_flows(id):
+def load_flows_suites(id):
     options_df = fetch_flows()
     options_df['id_str'] = options_df.index.astype(str)
 
@@ -136,13 +136,17 @@ def load_flows(id):
     if options_df is None or suites_df is None:
         raise dash.exceptions.PreventUpdate
 
+    # store serverside, cached for 24 hours
     return Serverside(options_df), Serverside(suites_df)
 
 
+# For deployment we need to register tasks manually and create
+# the 'server' object gunicorn needs
 if deploy:
     app.register_celery_tasks()
     server = app.server
 
+# This is for development
 if __name__ == "__main__":
     debug = 'debug' in sys.argv
     app.run(port=8888, debug=debug)

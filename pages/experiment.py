@@ -125,8 +125,6 @@ flow_content = html.Div([
                                     ]),
                             width={"size": 1}
                                 )
-
-
                     ]),
                 ])
 
@@ -199,6 +197,7 @@ def propagate_ids(data):
     return data
 
 
+# fetch the runs for a given flow/suite combination
 @callback(
     Output("raw_configspace", 'data'),
     Output("raw_data_store", 'data'),
@@ -226,7 +225,6 @@ def propagate_ids(data):
     cancel=[Input("cancel_button", "n_clicks")],
     progress_default=['0', '100'],
     cache_args_to_ignore=[0]  # Ignore the button clicks
-
 )
 def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
     if flow_id is None or suite_id is None:
@@ -237,24 +235,24 @@ def fetch_openml_data(set_progress, n_clicks, flow_id, suite_id, max_runs):
     if tasks is None:
         raise PreventUpdate
 
-    # TODO: eventually all of them, when done debugging
-    # tasks = tasks[:10]
-
     data = {}
 
     i = 0
     for task in tasks:
         i += 1
+        # Update the progress bar
         set_progress((str(i), str(len(tasks))))
+        # Fetch the data
         task_data = fetcher.fetch_runs(flow_id, task, max_runs=max_runs)
 
         if task_data is None:
             continue
         data[task] = fetcher.coerce_types(task_data)
 
+    # Send a warning if no runs exist for this combination
     if len(data) == 0:
         return (dash.no_update, dash.no_update, dash.no_update,
-                True, 'This combination has no data.')
+                True, 'This flow/suite combination has no runs.')
 
     return (fnvs.auto_configspace(data).to_serialized_dict(),
             Serverside(data),
@@ -321,6 +319,7 @@ def toggle_buttons(data):
     return data is None, data is None
 
 
+# run fanova analysis on the fetched data
 @callback(
     Output("fanova_results_local", "data"),
     Output("fanova-warning", "is_open", allow_duplicate=True),
@@ -369,7 +368,7 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data,
                              len(filtered_data) != 0) else raw_data
     cfg_space = ConfigurationSpace.from_serialized_dict(cfg_space)
 
-    # Finally we prepare to run fanova
+    # impute the data and make it numeric for fanova
     imputed_data, extended_cfg_space = fnvs.impute_data(data, cfg_space)
     if 'pairwise' in toggle_pairs:
         n_pairs = n_pairs or 3
@@ -377,27 +376,30 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data,
         imputed_data, extended_cfg_space = fnvs.bin_numeric(imputed_data,
                                                             extended_cfg_space,
                                                             n_bins)
-
     processed_data = fnvs.prepare_data(imputed_data, extended_cfg_space)
 
+    # set the logarithm scale toggles
     for param in log_data.keys():
         if param in extended_cfg_space.keys():
             extended_cfg_space[param].log = log_data[param]
 
+    # select only the specified hyperparameters
     selected_space = ConfigurationSpace([extended_cfg_space[select]
                                         for select in param_selection])
 
-    # Running fanova takes quite long, so I split it per task
+    # running fanova takes quite long, so I split it per task
     results = {}
     i = 0
     n = len(selected_space)
     total_pairs = (n*(n-1)) // 2
     for task, task_data in processed_data.items():
+        # update the progress bar
         i += 1
         set_progress((str(i), str(len(processed_data))))
         if len(task_data) < min_runs:
             continue
 
+        # run fanova, with or without pairwise marginals
         selected_data = task_data[['value'] + param_selection]
         if 'pairwise' in toggle_pairs:
             results[task] = fnvs.run_fanova(selected_data,
@@ -410,6 +412,7 @@ def run_fanova(set_progress, n_clicks, raw_data, filtered_data,
 
     results = pd.DataFrame.from_dict(results, orient='index')
 
+    # choose only the n_pairs most important pairs
     if 'pairwise' in toggle_pairs and n_pairs < total_pairs:
         pairwise = results.iloc[:, n:]
         avg_ranks = (
@@ -936,6 +939,7 @@ fanova_content = html.Div([
 ])
 
 
+# expand the binning settings if binning is enabled
 @callback(
     Output('pairwise_settings_collapse', 'is_open'),
     Output('n_pairs_input', 'value'),
@@ -948,6 +952,37 @@ def toggle_pairwise_settings(toggle):
         return True, dash.no_update, dash.no_update
     else:
         return False, 3, 32
+
+
+# populate the analysis selection dropdown with all non-constant
+# hyperparameters in the filtered data
+@callback(
+    Output('final_cfg_space', 'data'),
+    Output('analysis_select', 'options'),
+    Input('tabs', 'active_tab'),
+    Input('raw_configspace', 'data'),
+    State('filtered_data', 'data'),
+    prevent_initial_call=True
+)
+def analysis_options(tab, raw_cfg, filtered_data):
+    trigger = dash.callback_context.triggered_id
+
+    if trigger == 'tabs' and (tab != 'fanova' or raw_cfg is None):
+        raise PreventUpdate
+
+    # determine if triggered by raw data update, or filtered data update
+    if (trigger == 'raw_configspace'
+            or filtered_data is None
+            or len(filtered_data) == 0):
+        cfg_space = ConfigurationSpace.from_serialized_dict(raw_cfg)
+    else:
+        cfg_space = fnvs.auto_configspace(filtered_data)
+
+    # only non-constant hyperparams
+    choices = [name for name, param in cfg_space.items()
+               if not isinstance(param, Constant)]
+
+    return cfg_space.to_serialized_dict(), choices
 
 
 layout = dbc.Container(
@@ -1013,30 +1048,3 @@ def store_log_checkbox(value, cfg_space, param, log_data):
     log_data[param] = "log" in value
 
     return log_data
-
-
-@callback(
-    Output('final_cfg_space', 'data'),
-    Output('analysis_select', 'options'),
-    Input('tabs', 'active_tab'),
-    Input('raw_configspace', 'data'),
-    State('filtered_data', 'data'),
-    prevent_initial_call=True
-)
-def analysis_options(tab, raw_cfg, filtered_data):
-    trigger = dash.callback_context.triggered_id
-
-    if trigger == 'tabs' and (tab != 'fanova' or raw_cfg is None):
-        raise PreventUpdate
-
-    if (trigger == 'raw_configspace'
-            or filtered_data is None
-            or len(filtered_data) == 0):
-        cfg_space = ConfigurationSpace.from_serialized_dict(raw_cfg)
-    else:
-        cfg_space = fnvs.auto_configspace(filtered_data)
-
-    choices = [name for name, param in cfg_space.items()
-               if not isinstance(param, Constant)]
-
-    return cfg_space.to_serialized_dict(), choices
