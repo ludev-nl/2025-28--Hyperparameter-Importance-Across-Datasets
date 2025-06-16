@@ -64,7 +64,7 @@ layout = dbc.Container([
                         color="primary",
                         ),
                     href=("https://github.com/ludev-nl/2025-28--Hyperparameter"
-                          "-Importance-Across-Datasets.gitc"),
+                          "-Importance-Across-Datasets.git"),
                     target="_blank"
                 )
             ],
